@@ -24,16 +24,12 @@ class _PingPongWidgetState extends State<PingPongWidget> {
 
   bool _isInitialized = false;
   bool _showCountdown = false;
-  bool _hasStartedMatch = false;
-  bool _showInitialHint = true;
+  bool _isPlaying = false;
   Timer? _hintTimer;
 
   @override
   void initState() {
     super.initState();
-    _hintTimer = Timer(const Duration(seconds: 4), () {
-      if (mounted) setState(() => _showInitialHint = false);
-    });
   }
 
   @override
@@ -64,7 +60,7 @@ class _PingPongWidgetState extends State<PingPongWidget> {
     if (!mounted) return;
 
     setState(() {
-      _hasStartedMatch = false;
+      _isPlaying = false;
       topScore = 0;
       bottomScore = 0;
       _game = PingPongGame(
@@ -88,6 +84,13 @@ class _PingPongWidgetState extends State<PingPongWidget> {
     });
   }
 
+  void _startGame() {
+    setState(() {
+      _isPlaying = true;
+      _showCountdown = true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_game == null) {
@@ -96,79 +99,177 @@ class _PingPongWidgetState extends State<PingPongWidget> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final iconColor = isDark ? Colors.white54 : Colors.black54;
-    final hintColor = isDark
-        ? Colors.white.withOpacity(0.5)
-        : Colors.black.withOpacity(0.5);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
-          // 1. Large Background Score Decoration
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Opacity(
-                opacity: 0.08,
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          "$topScore",
-                          style: const TextStyle(
-                            fontSize: 280,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.redAccent,
+          if (_isPlaying) ...[
+            // 1. Large Background Score Decoration
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Opacity(
+                  opacity: 0.08,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            "$topScore",
+                            style: const TextStyle(
+                              fontSize: 280,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.redAccent,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          "$bottomScore",
-                          style: const TextStyle(
-                            fontSize: 280,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.blueAccent,
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            "$bottomScore",
+                            style: const TextStyle(
+                              fontSize: 280,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.blueAccent,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // 2. The Game
-          GameWidget(game: _game!, autofocus: true),
+            // 2. The Game
+            GameWidget(game: _game!, autofocus: true),
 
-          // 3. Real-Time High-Visibility Scoreboard
-          Positioned(
-            right: 20,
-            top: 0,
-            bottom: 0,
-            child: IgnorePointer(
+            // 3. Real-Time High-Visibility Scoreboard
+            Positioned(
+              right: 20,
+              top: 0,
+              bottom: 0,
+              child: IgnorePointer(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildCompactScore(topScore, Colors.redAccent, "P2"),
+                      Container(
+                        height: 40,
+                        width: 2,
+                        color: isDark ? Colors.white12 : Colors.black12,
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                      _buildCompactScore(bottomScore, Colors.blueAccent, "P1"),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // 7. Serves / Pause Indicator
+            if (_game!.isPaused && !_showCountdown && !_game!.isGameOver)
+              Positioned(
+                top: MediaQuery.of(context).size.height * 0.45,
+                left: 0,
+                right: 0,
+                child: const Center(
+                  child: Text(
+                    "READY...",
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 40,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 4,
+                    ),
+                  ),
+                ),
+              ),
+          ] else
+            // Start Screen
+            Positioned.fill(
               child: Center(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildCompactScore(topScore, Colors.redAccent, "P2"),
                     Container(
-                      height: 40,
-                      width: 2,
-                      color: isDark ? Colors.white12 : Colors.black12,
-                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: widget.game.primaryColor.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        widget.game.icon,
+                        size: 80,
+                        color: widget.game.primaryColor,
+                      ),
                     ),
-                    _buildCompactScore(bottomScore, Colors.blueAccent, "P1"),
+                    const SizedBox(height: 32),
+                    Text(
+                      widget.game.title,
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      "Local P1 vs P2 Match",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 48),
+                    // Controls Info
+                    _buildInfoCard(
+                      "PLAYER 1 (BOTTOM)",
+                      "W/S Keys or Drag Paddle",
+                      Colors.blueAccent,
+                      Icons.settings_input_component_rounded,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildInfoCard(
+                      "PLAYER 2 (TOP)",
+                      "Arrow Keys or Drag Paddle",
+                      Colors.redAccent,
+                      Icons.settings_input_component_rounded,
+                    ),
+                    const SizedBox(height: 48),
+                    ElevatedButton(
+                      onPressed: _startGame,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: widget.game.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 48,
+                          vertical: 20,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(40),
+                        ),
+                        elevation: 8,
+                        shadowColor: widget.game.primaryColor.withOpacity(0.4),
+                      ),
+                      child: const Text(
+                        'START MATCH',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
-          ),
 
-          // 4. UI Header
+          // 4. UI Header (Back button always visible if not playing)
           Positioned(
             top: 0,
             left: 0,
@@ -179,7 +280,7 @@ class _PingPongWidgetState extends State<PingPongWidget> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    if (!_hasStartedMatch)
+                    if (!_isPlaying)
                       Align(
                         alignment: Alignment.centerLeft,
                         child: IconButton(
@@ -205,85 +306,6 @@ class _PingPongWidgetState extends State<PingPongWidget> {
               ),
             ),
           ),
-
-          // 5. Match Start Overlay
-          if (!_game!.isGameStarted &&
-              !_game!.isGameOver &&
-              !_showCountdown &&
-              !_game!.isPaused)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withOpacity(0.4),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (_showInitialHint) ...[
-                        const Text(
-                          "FIRST TO 7 POINTS",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _buildControlHint("P1: W/A/S/D", Colors.blueAccent),
-                            const SizedBox(width: 20),
-                            _buildControlHint("P2: ARROWS", Colors.redAccent),
-                          ],
-                        ),
-                        const SizedBox(height: 48),
-                      ],
-                      GestureDetector(
-                        onTap: () {
-                          if (!_hasStartedMatch) {
-                            setState(() {
-                              _showCountdown = true;
-                              _hasStartedMatch = true;
-                              _showInitialHint = false;
-                              _hintTimer?.cancel();
-                            });
-                          } else {
-                            _game!.releaseBall();
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 48,
-                            vertical: 20,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(40),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: Text(
-                            _hasStartedMatch ? "SERVE BALL" : "PLAY MATCH",
-                            style: TextStyle(
-                              color: widget.game.primaryColor,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
 
           // 6. Victory Screen
           if (_game!.isGameOver)
@@ -360,25 +382,6 @@ class _PingPongWidgetState extends State<PingPongWidget> {
               ),
             ),
 
-          // 7. Serves / Pause Indicator
-          if (_game!.isPaused && !_showCountdown && !_game!.isGameOver)
-            Positioned(
-              top: MediaQuery.of(context).size.height * 0.45,
-              left: 0,
-              right: 0,
-              child: const Center(
-                child: Text(
-                  "READY...",
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 40,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 4,
-                  ),
-                ),
-              ),
-            ),
-
           // 8. Global Countdown Overlay
           if (_showCountdown)
             Container(
@@ -394,6 +397,59 @@ class _PingPongWidgetState extends State<PingPongWidget> {
                 },
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(
+    String title,
+    String subtitle,
+    Color color,
+    IconData icon,
+  ) {
+    return Container(
+      width: 300,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.2), width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: color.withOpacity(0.8),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -427,25 +483,6 @@ class _PingPongWidgetState extends State<PingPongWidget> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildControlHint(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color.withOpacity(0.5)),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
-        ),
       ),
     );
   }
