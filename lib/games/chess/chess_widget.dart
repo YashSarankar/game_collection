@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/models/game_model.dart';
 import '../../core/services/haptic_service.dart';
 import '../../ui/widgets/game_over_dialog.dart';
+import '../../ui/widgets/game_countdown.dart';
 import 'chess_logic.dart';
 
 class ChessWidget extends StatefulWidget {
@@ -25,6 +26,7 @@ class _ChessWidgetState extends State<ChessWidget> {
   bool _isVsAI = false;
   bool _isPractice = false;
   bool _isGameStarted = false;
+  bool _isCounting = false;
 
   // Timer state
   Timer? _gameTimer;
@@ -63,7 +65,7 @@ class _ChessWidgetState extends State<ChessWidget> {
     _whiteTime = 300;
     _blackTime = 300;
 
-    if (_isGameStarted && !_isPractice && !_isVsAI) {
+    if (_isGameStarted && !_isVsAI && !_isPractice && !_isCounting) {
       _startTimer();
     }
 
@@ -237,6 +239,22 @@ class _ChessWidgetState extends State<ChessWidget> {
 
     if (!_isGameStarted) return _buildStartScreen(isDark);
 
+    if (_isCounting) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: GameCountdown(
+          onFinished: () {
+            setState(() {
+              _isCounting = false;
+              if (!_isPractice && !_isVsAI) {
+                _startTimer();
+              }
+            });
+          },
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -294,6 +312,7 @@ class _ChessWidgetState extends State<ChessWidget> {
                   _isVsAI = false;
                   _isPractice = false;
                   _isGameStarted = true;
+                  _isCounting = true;
                   _resetBoard();
                 });
               }, isDark),
@@ -303,6 +322,7 @@ class _ChessWidgetState extends State<ChessWidget> {
                   _isVsAI = true;
                   _isPractice = false;
                   _isGameStarted = true;
+                  _isCounting = true;
                   _resetBoard();
                 });
               }, isDark),
@@ -312,6 +332,7 @@ class _ChessWidgetState extends State<ChessWidget> {
                   _isVsAI = false;
                   _isPractice = true;
                   _isGameStarted = true;
+                  _isCounting = true;
                   _resetBoard();
                 });
               }, isDark),

@@ -15,6 +15,8 @@ enum GameType {
   sudoku,
   waterSort,
   chess,
+  snakesAndLadders,
+  airHockey,
 }
 
 /// Model representing a game in the collection
@@ -201,6 +203,26 @@ class GamesList {
       type: GameType.chess,
       primaryColor: Color(0xFF795548), // Brown
       secondaryColor: Color(0xFF5D4037),
+      isMultiplayer: true,
+    ),
+    const GameModel(
+      id: 'snakes_and_ladders',
+      title: 'Snakes & Ladders',
+      subtitle: 'Race to the top',
+      icon: Icons.stairs_rounded,
+      type: GameType.snakesAndLadders,
+      primaryColor: Color(0xFF9C27B0), // Purple
+      secondaryColor: Color(0xFFBA68C8),
+      isMultiplayer: true,
+    ),
+    const GameModel(
+      id: 'air_hockey',
+      title: 'Air Hockey',
+      subtitle: 'Fast-paced table sports',
+      icon: Icons.sports_hockey_rounded,
+      type: GameType.airHockey,
+      primaryColor: Color(0xFF00B4D8), // Sky Blue
+      secondaryColor: Color(0xFF90E0EF),
       isMultiplayer: true,
     ),
   ];
