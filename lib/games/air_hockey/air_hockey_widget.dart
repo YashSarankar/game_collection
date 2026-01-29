@@ -89,8 +89,8 @@ class _AirHockeyWidgetState extends State<AirHockeyWidget>
         return Center(
           child: ScaleTransition(
             scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
+            child: Material(
+              color: Colors.transparent,
               child: BackdropFilter(
                 filter: ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                 child: Container(
@@ -124,6 +124,7 @@ class _AirHockeyWidgetState extends State<AirHockeyWidget>
                           fontSize: 14,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 4,
+                          decoration: TextDecoration.none,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -133,6 +134,7 @@ class _AirHockeyWidgetState extends State<AirHockeyWidget>
                           color: Colors.white,
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.none,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -143,6 +145,7 @@ class _AirHockeyWidgetState extends State<AirHockeyWidget>
                           fontSize: 48,
                           fontWeight: FontWeight.w200,
                           letterSpacing: 8,
+                          decoration: TextDecoration.none,
                         ),
                       ),
                       const SizedBox(height: 32),
@@ -310,12 +313,6 @@ class _AirHockeyWidgetState extends State<AirHockeyWidget>
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 10,
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              height: 2,
-                              width: 100,
-                              color: widget.game.primaryColor,
                             ),
                             const SizedBox(height: 48),
                             const Text(

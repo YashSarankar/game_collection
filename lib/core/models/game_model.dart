@@ -17,6 +17,7 @@ enum GameType {
   chess,
   snakesAndLadders,
   airHockey,
+  tapDuel,
 }
 
 /// Model representing a game in the collection
@@ -223,6 +224,16 @@ class GamesList {
       type: GameType.airHockey,
       primaryColor: Color(0xFF00B4D8), // Sky Blue
       secondaryColor: Color(0xFF90E0EF),
+      isMultiplayer: true,
+    ),
+    const GameModel(
+      id: 'tap_duel',
+      title: 'Tap Duel',
+      subtitle: 'Fast reflex tapping battle',
+      icon: Icons.touch_app_rounded,
+      type: GameType.tapDuel,
+      primaryColor: Color(0xFFE91E63), // Pink
+      secondaryColor: Color(0xFFC2185B),
       isMultiplayer: true,
     ),
   ];
