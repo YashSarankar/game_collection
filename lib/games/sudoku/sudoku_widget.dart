@@ -36,6 +36,11 @@ class _SudokuWidgetState extends State<SudokuWidget> {
   HapticService? _hapticService;
   List<BoardState> _history = [];
 
+  // Countdown state
+  int _countdown = 3;
+  bool _isCountingDown = true;
+  Timer? _countdownTimer;
+
   @override
   void initState() {
     super.initState();
@@ -46,6 +51,7 @@ class _SudokuWidgetState extends State<SudokuWidget> {
   @override
   void dispose() {
     _timer?.cancel();
+    _countdownTimer?.cancel();
     super.dispose();
   }
 
@@ -72,9 +78,30 @@ class _SudokuWidgetState extends State<SudokuWidget> {
     _history = [];
 
     _resetTimer();
-    _startTimer();
+    _startCountdown();
 
     if (mounted) setState(() {});
+  }
+
+  void _startCountdown() {
+    _isCountingDown = true;
+    _countdown = 3;
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          if (_countdown > 1) {
+            _countdown--;
+            _hapticService?.light();
+          } else {
+            _isCountingDown = false;
+            _hapticService?.heavy();
+            timer.cancel();
+            _startTimer();
+          }
+        });
+      }
+    });
   }
 
   void _startTimer() {
@@ -104,7 +131,7 @@ class _SudokuWidgetState extends State<SudokuWidget> {
   }
 
   void _onCellTap(int r, int c) {
-    if (isGameOver) return;
+    if (isGameOver || _isCountingDown) return;
     _hapticService?.selectionClick();
     setState(() {
       selectedRow = r;
@@ -113,7 +140,11 @@ class _SudokuWidgetState extends State<SudokuWidget> {
   }
 
   void _onNumberButtonTap(int n) {
-    if (selectedRow == null || selectedCol == null || isGameOver) return;
+    if (selectedRow == null ||
+        selectedCol == null ||
+        isGameOver ||
+        _isCountingDown)
+      return;
     int r = selectedRow!;
     int c = selectedCol!;
     if (board[r][c] == n && !isNotesMode) return;
@@ -161,7 +192,11 @@ class _SudokuWidgetState extends State<SudokuWidget> {
   }
 
   void _eraseCell() {
-    if (selectedRow == null || selectedCol == null || isGameOver) return;
+    if (selectedRow == null ||
+        selectedCol == null ||
+        isGameOver ||
+        _isCountingDown)
+      return;
     int r = selectedRow!;
     int c = selectedCol!;
     if (isInitial[r][c]) return;
@@ -176,7 +211,7 @@ class _SudokuWidgetState extends State<SudokuWidget> {
   }
 
   void _undo() {
-    if (_history.isEmpty || isGameOver) return;
+    if (_history.isEmpty || isGameOver || _isCountingDown) return;
 
     BoardState lastState = _history.removeLast();
     setState(() {
@@ -253,60 +288,115 @@ class _SudokuWidgetState extends State<SudokuWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final color = widget.game.primaryColor;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           widget.game.title,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: color,
+        backgroundColor: theme.scaffoldBackgroundColor,
+        foregroundColor: isDark ? Colors.white : color,
         elevation: 0,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _startNewGame),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _startNewGame,
+            color: isDark ? Colors.white : color,
+          ),
         ],
       ),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            _buildInfoBar(color),
-            const Spacer(),
-            _buildSudokuGrid(color),
-            const Spacer(),
-            _buildTools(color),
-            const SizedBox(height: 10),
-            _buildNumberPad(color),
-            const SizedBox(height: 20),
+            Column(
+              children: [
+                _buildInfoBar(color, theme),
+                const Spacer(),
+                _buildSudokuGrid(color, theme),
+                const Spacer(),
+                _buildTools(color, theme),
+                const SizedBox(height: 10),
+                _buildNumberPad(color, theme),
+                const SizedBox(height: 20),
+              ],
+            ),
+            if (_isCountingDown) _buildCountdownOverlay(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoBar(Color color) {
+  Widget _buildCountdownOverlay() {
+    return Container(
+      color: Colors.black.withOpacity(0.7),
+      child: Center(
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 500),
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            return ScaleTransition(scale: animation, child: child);
+          },
+          child: Text(
+            '$_countdown',
+            key: ValueKey<int>(_countdown),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 120,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoBar(Color color, ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Mistakes: $mistakes / 3',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: mistakes > 0 ? Colors.redAccent : Colors.grey[600],
-                ),
+          _buildStatBox(
+            'MISTAKES',
+            '$mistakes / 3',
+            mistakes > 0
+                ? Colors.redAccent
+                : (isDark ? Colors.white : Colors.black),
+            isDark,
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            height: 36,
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isDark ? Colors.white10 : Colors.grey[300]!,
+                width: 1,
               ),
-              DropdownButton<SudokuDifficulty>(
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<SudokuDifficulty>(
                 value: difficulty,
-                underline: Container(),
-                iconEnabledColor: color,
-                style: TextStyle(color: color, fontWeight: FontWeight.bold),
+                icon: Icon(
+                  Icons.keyboard_arrow_down,
+                  size: 18,
+                  color: isDark ? Colors.white70 : color,
+                ),
+                iconEnabledColor: isDark ? Colors.white : color,
+                dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                style: TextStyle(
+                  color: isDark ? Colors.white : color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
                 items: SudokuDifficulty.values.map((d) {
                   return DropdownMenuItem(
                     value: d,
@@ -322,30 +412,64 @@ class _SudokuWidgetState extends State<SudokuWidget> {
                   }
                 },
               ),
-            ],
-          ),
-          Text(
-            _timeDisplay,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'monospace',
             ),
+          ),
+          _buildStatBox(
+            'TIME',
+            _timeDisplay,
+            isDark ? Colors.white : Colors.black,
+            isDark,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSudokuGrid(Color color) {
+  Widget _buildStatBox(
+    String label,
+    String value,
+    Color textColor,
+    bool isDark,
+  ) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: isDark ? Colors.white54 : Colors.grey[600],
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'monospace',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSudokuGrid(Color color, ThemeData theme) {
     double gridSize = MediaQuery.of(context).size.width - 24;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       width: gridSize,
       height: gridSize,
       margin: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.black, width: 2),
-        color: Colors.black,
+        border: Border.all(
+          color: isDark ? theme.dividerColor : Colors.black,
+          width: 2,
+        ),
+        color: isDark ? theme.dividerColor : Colors.black,
       ),
       child: GridView.builder(
         physics: const NeverScrollableScrollPhysics(),
@@ -356,12 +480,13 @@ class _SudokuWidgetState extends State<SudokuWidget> {
         ),
         itemCount: 81,
         itemBuilder: (context, index) =>
-            _buildCell(index ~/ 9, index % 9, color),
+            _buildCell(index ~/ 9, index % 9, color, theme),
       ),
     );
   }
 
-  Widget _buildCell(int r, int c, Color color) {
+  Widget _buildCell(int r, int c, Color color, ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
     bool isSelected = selectedRow == r && selectedCol == c;
     bool inSelectedRow = selectedRow == r;
     bool inSelectedCol = selectedCol == c;
@@ -379,8 +504,14 @@ class _SudokuWidgetState extends State<SudokuWidget> {
     bool isError = value != 0 && value != solution[r][c];
     bool inConflict = _conflicts.contains(Point(r, c));
 
-    BorderSide bold = const BorderSide(color: Colors.black, width: 1.5);
-    BorderSide slim = BorderSide(color: Colors.grey[300]!, width: 0.5);
+    BorderSide bold = BorderSide(
+      color: isDark ? theme.dividerColor : Colors.black,
+      width: 1.5,
+    );
+    BorderSide slim = BorderSide(
+      color: isDark ? Colors.white10 : Colors.grey[300]!,
+      width: 0.5,
+    );
 
     return GestureDetector(
       onTap: () => _onCellTap(r, c),
@@ -395,6 +526,7 @@ class _SudokuWidgetState extends State<SudokuWidget> {
             isError,
             inConflict,
             color,
+            theme,
           ),
           border: Border(
             right: (c == 2 || c == 5) ? bold : slim,
@@ -415,10 +547,11 @@ class _SudokuWidgetState extends State<SudokuWidget> {
                       isError,
                       inConflict,
                       color,
+                      isDark,
                     ),
                   ),
                 )
-              : _buildNotes(r, c),
+              : _buildNotes(r, c, isDark),
         ),
       ),
     );
@@ -433,21 +566,29 @@ class _SudokuWidgetState extends State<SudokuWidget> {
     bool error,
     bool conflict,
     Color color,
+    ThemeData theme,
   ) {
+    final isDark = theme.brightness == Brightness.dark;
     if (isSelected) return color.withOpacity(0.4);
-    if (error || conflict) return Colors.red.withOpacity(0.15);
-    if (same) return color.withOpacity(0.25);
-    if (row || col || box) return color.withOpacity(0.08);
-    return Colors.white;
+    if (error || conflict) return Colors.red.withOpacity(0.2);
+    if (same) return color.withOpacity(0.3);
+    if (row || col || box) return color.withOpacity(0.12);
+    return isDark ? Colors.black : Colors.white;
   }
 
-  Color _getTextColor(bool initial, bool error, bool conflict, Color color) {
-    if (error || conflict) return Colors.red;
-    if (initial) return Colors.black;
-    return color;
+  Color _getTextColor(
+    bool initial,
+    bool error,
+    bool conflict,
+    Color color,
+    bool isDark,
+  ) {
+    if (error || conflict) return Colors.redAccent;
+    if (initial) return isDark ? Colors.white : Colors.black;
+    return isDark ? color.withOpacity(0.9) : color;
   }
 
-  Widget _buildNotes(int r, int c) {
+  Widget _buildNotes(int r, int c, bool isDark) {
     Set<int> cellNotes = notes[r][c];
     if (cellNotes.isEmpty) return const SizedBox.shrink();
 
@@ -462,29 +603,45 @@ class _SudokuWidgetState extends State<SudokuWidget> {
         return Center(
           child: Text(
             cellNotes.contains(n) ? '$n' : '',
-            style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+            style: TextStyle(
+              fontSize: 10,
+              color: isDark ? Colors.white54 : Colors.grey[600],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildTools(Color color) {
+  Widget _buildTools(Color color, ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildToolButton(Icons.undo, "Undo", _undo, color),
-          _buildToolButton(Icons.delete_outline, "Erase", _eraseCell, color),
+          _buildToolButton(Icons.undo, "Undo", _undo, color, theme),
+          _buildToolButton(
+            Icons.delete_outline,
+            "Erase",
+            _eraseCell,
+            color,
+            theme,
+          ),
           _buildToolButton(
             isNotesMode ? Icons.edit : Icons.edit_outlined,
             "Notes",
             () => setState(() => isNotesMode = !isNotesMode),
             color,
+            theme,
             isActive: isNotesMode,
           ),
-          _buildToolButton(Icons.lightbulb_outline, "Hint", _useHint, color),
+          _buildToolButton(
+            Icons.lightbulb_outline,
+            "Hint",
+            _useHint,
+            color,
+            theme,
+          ),
         ],
       ),
     );
@@ -494,9 +651,11 @@ class _SudokuWidgetState extends State<SudokuWidget> {
     IconData icon,
     String label,
     VoidCallback onTap,
-    Color color, {
+    Color color,
+    ThemeData theme, {
     bool isActive = false,
   }) {
+    final isDark = theme.brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -504,13 +663,21 @@ class _SudokuWidgetState extends State<SudokuWidget> {
         padding: const EdgeInsets.all(8.0),
         child: Column(
           children: [
-            Icon(icon, size: 28, color: isActive ? color : Colors.grey[700]),
+            Icon(
+              icon,
+              size: 28,
+              color: isActive
+                  ? (isDark ? Colors.white : color)
+                  : (isDark ? Colors.white70 : Colors.grey[700]),
+            ),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: isActive ? color : Colors.grey[700],
+                color: isActive
+                    ? (isDark ? Colors.white : color)
+                    : (isDark ? Colors.white70 : Colors.grey[700]),
                 fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -521,7 +688,11 @@ class _SudokuWidgetState extends State<SudokuWidget> {
   }
 
   void _useHint() {
-    if (selectedRow == null || selectedCol == null || isGameOver) return;
+    if (selectedRow == null ||
+        selectedCol == null ||
+        isGameOver ||
+        _isCountingDown)
+      return;
     int r = selectedRow!;
     int c = selectedCol!;
     if (board[r][c] == solution[r][c]) return;
@@ -536,7 +707,8 @@ class _SudokuWidgetState extends State<SudokuWidget> {
     _hapticService?.light();
   }
 
-  Widget _buildNumberPad(Color color) {
+  Widget _buildNumberPad(Color color, ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -550,7 +722,9 @@ class _SudokuWidgetState extends State<SudokuWidget> {
                 margin: const EdgeInsets.symmetric(horizontal: 4),
                 height: 50,
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: isDark
+                      ? Colors.white.withOpacity(0.1)
+                      : Colors.grey[100],
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
@@ -558,7 +732,7 @@ class _SudokuWidgetState extends State<SudokuWidget> {
                     '$n',
                     style: TextStyle(
                       fontSize: 24,
-                      color: color,
+                      color: isDark ? Colors.white : color,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
