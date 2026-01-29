@@ -13,6 +13,7 @@ enum GameType {
   game2048,
   numberPuzzle,
   sudoku,
+  waterSort,
 }
 
 /// Model representing a game in the collection
@@ -179,6 +180,16 @@ class GamesList {
       type: GameType.sudoku,
       primaryColor: Color(0xFF34495E), // Wet Asphalt
       secondaryColor: Color(0xFF2C3E50),
+      isMultiplayer: false,
+    ),
+    const GameModel(
+      id: 'water_sort',
+      title: 'Water Sort',
+      subtitle: 'Sort the colors',
+      icon: Icons.opacity_rounded,
+      type: GameType.waterSort,
+      primaryColor: Color(0xFF2ECC71), // Nephritis Green
+      secondaryColor: Color(0xFF27AE60),
       isMultiplayer: false,
     ),
   ];

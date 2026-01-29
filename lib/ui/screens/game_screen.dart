@@ -11,6 +11,7 @@ import '../../games/carrom/carrom_widget.dart';
 import '../../games/game_2048/game_2048_widget.dart';
 import '../../games/number_puzzle/number_puzzle_widget.dart';
 import '../../games/sudoku/sudoku_widget.dart';
+import '../../games/water_sort/water_sort_widget.dart';
 
 class GameScreen extends StatelessWidget {
   final GameModel game;
@@ -49,6 +50,8 @@ class GameScreen extends StatelessWidget {
         return NumberPuzzleWidget(game: game);
       case GameType.sudoku:
         return SudokuWidget(game: game);
+      case GameType.waterSort:
+        return WaterSortWidget(game: game);
     }
   }
 }
