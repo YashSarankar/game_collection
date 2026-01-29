@@ -6,6 +6,11 @@ import '../../games/brick_breaker/brick_breaker_widget.dart';
 import '../../games/memory_match/memory_match_widget.dart';
 import '../../games/balloon_pop/balloon_pop_widget.dart';
 import '../../games/ping_pong/ping_pong_widget.dart';
+import '../../games/ludo/ludo_widget.dart';
+import '../../games/carrom/carrom_widget.dart';
+import '../../games/game_2048/game_2048_widget.dart';
+import '../../games/number_puzzle/number_puzzle_widget.dart';
+import '../../games/sudoku/sudoku_widget.dart';
 
 class GameScreen extends StatelessWidget {
   final GameModel game;
@@ -34,6 +39,16 @@ class GameScreen extends StatelessWidget {
         return BalloonPopWidget(game: game);
       case GameType.pingPong:
         return PingPongWidget(game: game);
+      case GameType.ludo:
+        return LudoWidget(game: game);
+      case GameType.carrom:
+        return CarromWidget(game: game);
+      case GameType.game2048:
+        return Game2048Widget(game: game);
+      case GameType.numberPuzzle:
+        return NumberPuzzleWidget(game: game);
+      case GameType.sudoku:
+        return SudokuWidget(game: game);
     }
   }
 }

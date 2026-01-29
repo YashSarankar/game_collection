@@ -8,6 +8,11 @@ enum GameType {
   memoryMatch,
   balloonPop,
   pingPong,
+  ludo,
+  carrom,
+  game2048,
+  numberPuzzle,
+  sudoku,
 }
 
 /// Model representing a game in the collection
@@ -125,6 +130,56 @@ class GamesList {
       primaryColor: Color(0xFFD35400), // Deep Orange
       secondaryColor: Color(0xFFE67E22),
       isMultiplayer: true,
+    ),
+    const GameModel(
+      id: 'ludo',
+      title: 'Ludo',
+      subtitle: 'Classic board game',
+      icon: Icons.grid_view_rounded,
+      type: GameType.ludo,
+      primaryColor: Color(0xFF3498DB), // Blue
+      secondaryColor: Color(0xFF2980B9),
+      isMultiplayer: true,
+    ),
+    const GameModel(
+      id: 'carrom',
+      title: 'Carrom',
+      subtitle: 'Strike the coins',
+      icon: Icons.adjust_rounded,
+      type: GameType.carrom,
+      primaryColor: Color(0xFF8B4513), // Saddle Brown
+      secondaryColor: Color(0xFFA0522D),
+      isMultiplayer: true,
+    ),
+    const GameModel(
+      id: 'game_2048',
+      title: '2048',
+      subtitle: 'Merge the tiles',
+      icon: Icons.grid_3x3_rounded,
+      type: GameType.game2048,
+      primaryColor: Color(0xFFEDC22E), // 2048 Gold
+      secondaryColor: Color(0xFFF2B179),
+      isMultiplayer: false,
+    ),
+    const GameModel(
+      id: 'number_puzzle',
+      title: 'Number Puzzle',
+      subtitle: 'Slide and solve',
+      icon: Icons.filter_9_plus_rounded,
+      type: GameType.numberPuzzle,
+      primaryColor: Color(0xFF9B59B6), // Amethyst
+      secondaryColor: Color(0xFF8E44AD),
+      isMultiplayer: false,
+    ),
+    const GameModel(
+      id: 'sudoku',
+      title: 'Sudoku',
+      subtitle: 'Plan with numbers',
+      icon: Icons.calculate_rounded,
+      type: GameType.sudoku,
+      primaryColor: Color(0xFF34495E), // Wet Asphalt
+      secondaryColor: Color(0xFF2C3E50),
+      isMultiplayer: false,
     ),
   ];
 }
