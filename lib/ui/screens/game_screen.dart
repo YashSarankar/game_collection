@@ -12,6 +12,7 @@ import '../../games/game_2048/game_2048_widget.dart';
 import '../../games/number_puzzle/number_puzzle_widget.dart';
 import '../../games/sudoku/sudoku_widget.dart';
 import '../../games/water_sort/water_sort_widget.dart';
+import '../../games/chess/chess_widget.dart';
 
 class GameScreen extends StatelessWidget {
   final GameModel game;
@@ -52,6 +53,8 @@ class GameScreen extends StatelessWidget {
         return SudokuWidget(game: game);
       case GameType.waterSort:
         return WaterSortWidget(game: game);
+      case GameType.chess:
+        return ChessWidget(game: game);
     }
   }
 }

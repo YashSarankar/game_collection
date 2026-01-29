@@ -14,6 +14,7 @@ enum GameType {
   numberPuzzle,
   sudoku,
   waterSort,
+  chess,
 }
 
 /// Model representing a game in the collection
@@ -191,6 +192,16 @@ class GamesList {
       primaryColor: Color(0xFF2ECC71), // Nephritis Green
       secondaryColor: Color(0xFF27AE60),
       isMultiplayer: false,
+    ),
+    const GameModel(
+      id: 'chess',
+      title: 'Chess',
+      subtitle: 'The ultimate strategy',
+      icon: Icons.grid_4x4_rounded,
+      type: GameType.chess,
+      primaryColor: Color(0xFF795548), // Brown
+      secondaryColor: Color(0xFF5D4037),
+      isMultiplayer: true,
     ),
   ];
 }
