@@ -269,8 +269,9 @@ class _SnakeGameWidgetState extends State<SnakeGameWidget> {
                                   Future.delayed(
                                     const Duration(milliseconds: 800),
                                     () {
-                                      if (mounted)
+                                      if (mounted) {
                                         setState(() => _showCountdown = false);
+                                      }
                                     },
                                   );
                                 }

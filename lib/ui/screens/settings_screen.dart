@@ -186,7 +186,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               _buildNavigationTile(
                 title: 'Version',
-                icon: Icons.info_outline_rounded,
+                icon: Icons.info_rounded,
                 iconColor: Colors.grey,
                 value: '1.0.0',
                 onTap: null, // Read-only

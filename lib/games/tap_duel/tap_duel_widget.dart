@@ -71,9 +71,11 @@ class _TapDuelWidgetState extends State<TapDuelWidget>
   Future<void> _initializeServices() async {
     _hapticService = await HapticService.getInstance();
     _soundService = await SoundService.getInstance();
-    setState(() {
-      _servicesInitialized = true;
-    });
+    if (mounted) {
+      setState(() {
+        _servicesInitialized = true;
+      });
+    }
   }
 
   @override
@@ -100,6 +102,10 @@ class _TapDuelWidgetState extends State<TapDuelWidget>
     });
 
     Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       if (_countdownValue > 1) {
         setState(() {
           _countdownValue--;
@@ -122,6 +128,10 @@ class _TapDuelWidgetState extends State<TapDuelWidget>
 
     if (_mode == TapDuelMode.timeAttack) {
       _gameTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
         setState(() {
           if (_secondsRemaining > 1) {
             _secondsRemaining--;
@@ -157,27 +167,29 @@ class _TapDuelWidgetState extends State<TapDuelWidget>
   void _playerTap(int player) {
     if (!_gameStarted || _isGameOver) return;
 
-    setState(() {
-      if (player == 1) {
-        _player1Score++;
-        _p1PulseController.forward(from: 0);
-        if (_mode == TapDuelMode.pushBattle) {
-          _pushPosition += 0.02;
-          if (_pushPosition >= 0.98) _endGame(1);
-        } else if (_mode == TapDuelMode.scoreRace && _player1Score >= 30) {
-          _endGame(1);
+    if (mounted) {
+      setState(() {
+        if (player == 1) {
+          _player1Score++;
+          _p1PulseController.forward(from: 0);
+          if (_mode == TapDuelMode.pushBattle) {
+            _pushPosition += 0.02;
+            if (_pushPosition >= 0.98) _endGame(1);
+          } else if (_mode == TapDuelMode.scoreRace && _player1Score >= 30) {
+            _endGame(1);
+          }
+        } else {
+          _player2Score++;
+          _p2PulseController.forward(from: 0);
+          if (_mode == TapDuelMode.pushBattle) {
+            _pushPosition -= 0.02;
+            if (_pushPosition <= 0.02) _endGame(2);
+          } else if (_mode == TapDuelMode.scoreRace && _player2Score >= 30) {
+            _endGame(2);
+          }
         }
-      } else {
-        _player2Score++;
-        _p2PulseController.forward(from: 0);
-        if (_mode == TapDuelMode.pushBattle) {
-          _pushPosition -= 0.02;
-          if (_pushPosition <= 0.02) _endGame(2);
-        } else if (_mode == TapDuelMode.scoreRace && _player2Score >= 30) {
-          _endGame(2);
-        }
-      }
-    });
+      });
+    }
 
     _hapticService.light();
     _shakeController.forward(from: 0).then((_) => _shakeController.reverse());
@@ -203,16 +215,18 @@ class _TapDuelWidgetState extends State<TapDuelWidget>
       }
     }
 
-    setState(() {
-      _isGameOver = true;
-      _gameStarted = false;
-      if (winner == 1)
-        _winner = "PLAYER 1 WINS!";
-      else if (winner == 2)
-        _winner = _vsAI ? "AI WINS!" : "PLAYER 2 WINS!";
-      else
-        _winner = "IT'S A DRAW!";
-    });
+    if (mounted) {
+      setState(() {
+        _isGameOver = true;
+        _gameStarted = false;
+        if (winner == 1)
+          _winner = "PLAYER 1 WINS!";
+        else if (winner == 2)
+          _winner = _vsAI ? "AI WINS!" : "PLAYER 2 WINS!";
+        else
+          _winner = "IT'S A DRAW!";
+      });
+    }
 
     _hapticService.success();
     _soundService.playSuccess();

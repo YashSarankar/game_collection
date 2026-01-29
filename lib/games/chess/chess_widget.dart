@@ -80,25 +80,27 @@ class _ChessWidgetState extends State<ChessWidget> {
         return;
       }
 
-      setState(() {
-        if (chessBoard.turn == PlayerColor.white) {
-          _whiteTime--;
-          if (_whiteTime <= 0) {
-            isGameOver = true;
-            gameStatus = "WHITE OUT OF TIME! BLACK WINS";
-            _gameTimer?.cancel();
-            _showGameOverDialog();
+      if (mounted) {
+        setState(() {
+          if (chessBoard.turn == PlayerColor.white) {
+            _whiteTime--;
+            if (_whiteTime <= 0) {
+              isGameOver = true;
+              gameStatus = "WHITE OUT OF TIME! BLACK WINS";
+              _gameTimer?.cancel();
+              _showGameOverDialog();
+            }
+          } else {
+            _blackTime--;
+            if (_blackTime <= 0) {
+              isGameOver = true;
+              gameStatus = "BLACK OUT OF TIME! WHITE WINS";
+              _gameTimer?.cancel();
+              _showGameOverDialog();
+            }
           }
-        } else {
-          _blackTime--;
-          if (_blackTime <= 0) {
-            isGameOver = true;
-            gameStatus = "BLACK OUT OF TIME! WHITE WINS";
-            _gameTimer?.cancel();
-            _showGameOverDialog();
-          }
-        }
-      });
+        });
+      }
     });
   }
 
@@ -159,7 +161,9 @@ class _ChessWidgetState extends State<ChessWidget> {
 
     if (!isGameOver && _isVsAI && chessBoard.turn == PlayerColor.black) {
       // AI Move
-      Future.delayed(const Duration(milliseconds: 500), _makeAIMove);
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) _makeAIMove();
+      });
     }
   }
 

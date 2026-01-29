@@ -68,7 +68,7 @@ class _PingPongWidgetState extends State<PingPongWidget> {
         ballColor: ballColor,
         gameBackgroundColor: bgColor,
         onGameOver: () {
-          setState(() {});
+          if (mounted) setState(() {});
         },
         onScoreUpdate: (t, b) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -347,7 +347,7 @@ class _PingPongWidgetState extends State<PingPongWidget> {
                       ElevatedButton(
                         onPressed: () {
                           _game!.restartGame();
-                          setState(() {});
+                          if (mounted) setState(() {});
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,

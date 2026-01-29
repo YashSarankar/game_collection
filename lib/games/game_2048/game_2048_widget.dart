@@ -54,6 +54,10 @@ class _Game2048WidgetState extends State<Game2048Widget>
   void _startTimer() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       if (!isGameOver) {
         setState(() {
           _secondsElapsed++;

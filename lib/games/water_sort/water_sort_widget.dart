@@ -252,25 +252,25 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
   Widget _buildLevelSelection(bool isDark) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.opacity_rounded,
-              size: 80,
+              size: 60,
               color: widget.game.primaryColor,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             const Text(
               'SELECT DIFFICULTY',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 20,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 2,
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 20),
             ...[1, 2, 3, 4, 5].map((d) {
               final label = [
                 'EASY',
@@ -281,10 +281,10 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
               ][d - 1];
               final isDiff = difficulty == d;
               return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.only(bottom: 10),
                 child: SizedBox(
                   width: double.infinity,
-                  height: 60,
+                  height: 54,
                   child: ElevatedButton(
                     onPressed: () {
                       _hapticService?.light();

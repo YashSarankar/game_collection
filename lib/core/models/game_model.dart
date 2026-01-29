@@ -18,6 +18,7 @@ enum GameType {
   snakesAndLadders,
   airHockey,
   tapDuel,
+  dotsAndBoxes,
 }
 
 /// Model representing a game in the collection
@@ -234,6 +235,16 @@ class GamesList {
       type: GameType.tapDuel,
       primaryColor: Color(0xFFE91E63), // Pink
       secondaryColor: Color(0xFFC2185B),
+      isMultiplayer: true,
+    ),
+    const GameModel(
+      id: 'dots_and_boxes',
+      title: 'Dots & Boxes',
+      subtitle: 'Claim the most boxes',
+      icon: Icons.grid_on_rounded,
+      type: GameType.dotsAndBoxes,
+      primaryColor: Color(0xFF4CAF50), // Green
+      secondaryColor: Color(0xFF81C784),
       isMultiplayer: true,
     ),
   ];

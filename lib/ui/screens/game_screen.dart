@@ -16,6 +16,7 @@ import '../../games/chess/chess_widget.dart';
 import '../../games/snakes_and_ladders/snakes_and_ladders_widget.dart';
 import '../../games/air_hockey/air_hockey_widget.dart';
 import '../../games/tap_duel/tap_duel_widget.dart';
+import '../../games/dots_and_boxes/dots_and_boxes_widget.dart';
 
 class GameScreen extends StatelessWidget {
   final GameModel game;
@@ -64,6 +65,8 @@ class GameScreen extends StatelessWidget {
         return AirHockeyWidget(game: game);
       case GameType.tapDuel:
         return TapDuelWidget(game: game);
+      case GameType.dotsAndBoxes:
+        return DotsAndBoxesWidget(game: game);
     }
   }
 }

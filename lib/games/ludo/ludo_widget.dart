@@ -122,13 +122,17 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
     // Animation
     for (int i = 0; i < 6; i++) {
       await Future.delayed(const Duration(milliseconds: 100));
-      setState(() => diceValue = Random().nextInt(6) + 1);
+      if (mounted) setState(() => diceValue = Random().nextInt(6) + 1);
     }
 
-    setState(() {
-      diceValue = finalRoll;
-      isRolling = false;
-    });
+    if (mounted) {
+      setState(() {
+        diceValue = finalRoll;
+        isRolling = false;
+      });
+    } else {
+      return;
+    }
 
     _hapticService?.medium();
     _calculateMovablePieces();
@@ -184,6 +188,7 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
     int steps = diceValue;
     for (int i = 0; i < steps; i++) {
       await Future.delayed(const Duration(milliseconds: 200));
+      if (!mounted) return;
       _hapticService?.light();
       setState(() {
         piece.position++;
@@ -245,6 +250,7 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
 
   void _nextTurn() async {
     await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
 
     List<int> activePlayers = [];
     if (_playerCount == 2) {

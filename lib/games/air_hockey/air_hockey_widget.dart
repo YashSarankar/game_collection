@@ -36,6 +36,9 @@ class _AirHockeyWidgetState extends State<AirHockeyWidget>
 
   Future<void> _initServices() async {
     _hapticService = await HapticService.getInstance();
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _startGame() {
@@ -72,6 +75,7 @@ class _AirHockeyWidgetState extends State<AirHockeyWidget>
   }
 
   void _flashGoal() async {
+    if (!mounted) return;
     setState(() => _showGoalFlash = true);
     await Future.delayed(const Duration(milliseconds: 200));
     if (mounted) setState(() => _showGoalFlash = false);
