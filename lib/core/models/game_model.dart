@@ -19,6 +19,8 @@ enum GameType {
   airHockey,
   tapDuel,
   dotsAndBoxes,
+  spaceShooterDuel,
+  tankBattle,
 }
 
 /// Model representing a game in the collection
@@ -245,6 +247,26 @@ class GamesList {
       type: GameType.dotsAndBoxes,
       primaryColor: Color(0xFF4CAF50), // Green
       secondaryColor: Color(0xFF81C784),
+      isMultiplayer: true,
+    ),
+    const GameModel(
+      id: 'space_shooter_duel',
+      title: 'Space Shooter Duel',
+      subtitle: 'High-energy space combat',
+      icon: Icons.rocket_launch_rounded,
+      type: GameType.spaceShooterDuel,
+      primaryColor: Color(0xFF7C4DFF), // Deep Purple
+      secondaryColor: Color(0xFF9575CD),
+      isMultiplayer: true,
+    ),
+    const GameModel(
+      id: 'tank_battle',
+      title: 'Tank Battle',
+      subtitle: 'Tactical tank warfare',
+      icon: Icons.military_tech_rounded,
+      type: GameType.tankBattle,
+      primaryColor: Color(0xFF546E7A), // Blue Grey
+      secondaryColor: Color(0xFF78909C),
       isMultiplayer: true,
     ),
   ];
