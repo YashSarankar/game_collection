@@ -19,6 +19,13 @@ import '../../games/tap_duel/tap_duel_widget.dart';
 import '../../games/dots_and_boxes/dots_and_boxes_widget.dart';
 import '../../games/space_shooter_duel/space_shooter_duel_widget.dart';
 import '../../games/tank_battle/tank_battle_widget.dart';
+import '../../games/asteroids/asteroids_widget.dart';
+import '../../games/nine_mens_morris/nine_mens_morris_widget.dart';
+import '../../games/word_battle/word_battle_widget.dart';
+import '../../games/reaction_time_battle/reaction_time_battle_widget.dart';
+import '../../games/tug_of_war/tug_of_war_widget.dart';
+import '../../games/knife_hit/knife_hit_widget.dart';
+import '../../games/match_3/match_3_widget.dart';
 
 class GameScreen extends StatelessWidget {
   final GameModel game;
@@ -73,6 +80,20 @@ class GameScreen extends StatelessWidget {
         return const SpaceShooterDuelWidget();
       case GameType.tankBattle:
         return const TankBattleWidget();
+      case GameType.asteroids:
+        return AsteroidsWidget(game: game);
+      case GameType.nineMensMorris:
+        return NineMensMorrisWidget(game: game);
+      case GameType.wordBattle:
+        return WordBattleWidget(game: game);
+      case GameType.reactionTimeBattle:
+        return ReactionTimeBattleWidget(game: game);
+      case GameType.tugOfWar:
+        return TugOfWarWidget(game: game);
+      case GameType.knifeHit:
+        return KnifeHitWidget(game: game);
+      case GameType.match3:
+        return Match3Widget(game: game);
     }
   }
 }

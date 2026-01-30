@@ -175,9 +175,9 @@ class _SplashScreenState extends State<SplashScreen>
                               color: isDark ? Colors.white : Colors.black87,
                             ),
                             children: const [
-                              TextSpan(text: 'GAME'),
+                              TextSpan(text: 'Snap'),
                               TextSpan(
-                                text: ' HUB',
+                                text: 'Play',
                                 style: TextStyle(color: orangeAccent),
                               ),
                             ],

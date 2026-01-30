@@ -4,7 +4,6 @@ import '../../core/providers/settings_provider.dart';
 import '../../core/providers/score_provider.dart';
 
 import '../../core/services/haptic_service.dart';
-import '../../core/constants/app_constants.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -158,32 +157,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             dividerColor: dividerColor,
             isDark: isDark,
             children: [
-              _buildNavigationTile(
-                title: 'Privacy Policy',
-                icon: Icons.privacy_tip_rounded,
-                iconColor: Colors.blueGrey,
-                onTap: () {
-                  _showInfoDialog(
-                    context,
-                    'Privacy Policy',
-                    'Privacy policy URL: ${AppConstants.privacyPolicyUrl}\n\nIn a production app, this would open in a browser.',
-                  );
-                },
-                isDark: isDark,
-              ),
-              _buildNavigationTile(
-                title: 'Terms of Service',
-                icon: Icons.description_rounded,
-                iconColor: Colors.blueGrey,
-                onTap: () {
-                  _showInfoDialog(
-                    context,
-                    'Terms of Service',
-                    'Terms URL: ${AppConstants.termsOfServiceUrl}\n\nIn a production app, this would open in a browser.',
-                  );
-                },
-                isDark: isDark,
-              ),
               _buildNavigationTile(
                 title: 'Version',
                 icon: Icons.info_rounded,
@@ -395,22 +368,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               }
             },
             child: const Text('Reset', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showInfoDialog(BuildContext context, String title, String content) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(content),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
           ),
         ],
       ),

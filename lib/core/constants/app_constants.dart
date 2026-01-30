@@ -1,8 +1,8 @@
 /// App-wide constants for configuration and settings
 class AppConstants {
   // App Info
-  static const String appName = 'Offline Games';
-  static const String appSubtitle = 'No WiFi Games Collection';
+  static const String appName = 'SnapPlay';
+  static const String appSubtitle = 'OFFLINE COLLECTION';
   static const String packageName = 'com.offlinegames.collection';
 
   // Ad Configuration
@@ -29,9 +29,4 @@ class AppConstants {
   static const String keyVibrationEnabled = 'vibration_enabled';
   static const String keyThemeMode = 'theme_mode';
   static const String keyAppLaunchTime = 'app_launch_time';
-
-  // Privacy & Legal
-  static const String privacyPolicyUrl =
-      'https://yourwebsite.com/privacy-policy';
-  static const String termsOfServiceUrl = 'https://yourwebsite.com/terms';
 }

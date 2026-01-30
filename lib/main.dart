@@ -70,7 +70,7 @@ class MyApp extends StatelessWidget {
         }
 
         return MaterialApp(
-          title: 'Offline Games Collection',
+          title: 'SnapPlay',
           debugShowCheckedModeBanner: false,
           themeMode: _getThemeMode(settings.themeMode),
           theme: ThemeData(

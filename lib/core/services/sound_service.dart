@@ -64,6 +64,10 @@ class SoundService {
     // await playSound('sounds/error.mp3');
   }
 
+  Future<void> playPoint() async {
+    // await playSound('sounds/point.mp3');
+  }
+
   Future<void> playPop() async {
     // await playSound('sounds/pop.mp3');
   }

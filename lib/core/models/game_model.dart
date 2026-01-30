@@ -21,6 +21,13 @@ enum GameType {
   dotsAndBoxes,
   spaceShooterDuel,
   tankBattle,
+  asteroids,
+  nineMensMorris,
+  wordBattle,
+  reactionTimeBattle,
+  tugOfWar,
+  knifeHit,
+  match3,
 }
 
 /// Model representing a game in the collection
@@ -268,6 +275,76 @@ class GamesList {
       primaryColor: Color(0xFF546E7A), // Blue Grey
       secondaryColor: Color(0xFF78909C),
       isMultiplayer: true,
+    ),
+    const GameModel(
+      id: 'asteroids',
+      title: 'Asteroids',
+      subtitle: 'Classic space survival',
+      icon: Icons.rocket_outlined,
+      type: GameType.asteroids,
+      primaryColor: Color(0xFF2C3E50), // Dark space blue
+      secondaryColor: Color(0xFFBDC3C7), // Silver/Grey
+      isMultiplayer: false,
+    ),
+    const GameModel(
+      id: 'nine_mens_morris',
+      title: 'Nine Men\'s Morris',
+      subtitle: 'Ancient strategy board game',
+      icon: Icons.grid_on_rounded,
+      type: GameType.nineMensMorris,
+      primaryColor: Color(0xFF8B4513), // Saddle Brown
+      secondaryColor: Color(0xFFD2B48C), // Tan
+      isMultiplayer: true,
+    ),
+    const GameModel(
+      id: 'word_battle',
+      title: 'Word Battle',
+      subtitle: 'Make words and score points',
+      icon: Icons.spellcheck_rounded,
+      type: GameType.wordBattle,
+      primaryColor: Color(0xFF4285F4), // Google Blue
+      secondaryColor: Color(0xFF34A853), // Google Green
+      isMultiplayer: true,
+    ),
+    const GameModel(
+      id: 'reaction_time_battle',
+      title: 'Reaction Battle',
+      subtitle: 'Test your reflexes',
+      icon: Icons.flash_on_rounded,
+      type: GameType.reactionTimeBattle,
+      primaryColor: Color(0xFFFFD700), // Gold
+      secondaryColor: Color(0xFFFFA500), // Orange
+      isMultiplayer: true,
+    ),
+    const GameModel(
+      id: 'tug_of_war',
+      title: 'Tug of War',
+      subtitle: 'Fast tapping battle',
+      icon: Icons.unfold_more_rounded,
+      type: GameType.tugOfWar,
+      primaryColor: Color(0xFFC62828), // Deep Red
+      secondaryColor: Color(0xFF1565C0), // Deep Blue
+      isMultiplayer: true,
+    ),
+    const GameModel(
+      id: 'knife_hit',
+      title: 'Knife Hit',
+      subtitle: 'Timing is everything',
+      icon: Icons.ads_click_rounded,
+      type: GameType.knifeHit,
+      primaryColor: Color(0xFF795548), // Brown
+      secondaryColor: Color(0xFFE91E63), // Pink
+      isMultiplayer: false,
+    ),
+    const GameModel(
+      id: 'match_3',
+      title: 'Match 3',
+      subtitle: 'Classic puzzle matching',
+      icon: Icons.grid_view_rounded,
+      type: GameType.match3,
+      primaryColor: Color(0xFFFF4081), // Pink Accent
+      secondaryColor: Color(0xFF7C4DFF), // Deep Purple
+      isMultiplayer: false,
     ),
   ];
 }
