@@ -94,30 +94,6 @@ class StorageService {
     return difference >= AppConstants.dailyRewardCooldown;
   }
 
-  // Ad Management
-  Future<DateTime?> getLastInterstitialAdTime() async {
-    final int? timestamp = _prefs?.getInt(
-      AppConstants.keyLastInterstitialAdTime,
-    );
-    if (timestamp == null) return null;
-    return DateTime.fromMillisecondsSinceEpoch(timestamp);
-  }
-
-  Future<bool> setLastInterstitialAdTime() async {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    return await _prefs?.setInt(AppConstants.keyLastInterstitialAdTime, now) ??
-        false;
-  }
-
-  Future<int> getAdCount() async {
-    return _prefs?.getInt(AppConstants.keyAdCount) ?? 0;
-  }
-
-  Future<bool> incrementAdCount() async {
-    final current = await getAdCount();
-    return await _prefs?.setInt(AppConstants.keyAdCount, current + 1) ?? false;
-  }
-
   Future<DateTime?> getAppLaunchTime() async {
     final int? timestamp = _prefs?.getInt(AppConstants.keyAppLaunchTime);
     if (timestamp == null) return null;

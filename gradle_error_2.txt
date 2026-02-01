@@ -1,0 +1,326 @@
+> Task :gradle:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle:pluginDescriptors UP-TO-DATE
+> Task :gradle:processResources
+
+> Task :gradle:compileKotlin
+w: file:///C:/Users/yashs/flutter/packages/flutter_tools/gradle/src/main/kotlin/FlutterPlugin.kt:11:37 'ApkVariant' is deprecated. Deprecated in Java
+w: file:///C:/Users/yashs/flutter/packages/flutter_tools/gradle/src/main/kotlin/FlutterPlugin.kt:609:69 'ApkVariant' is deprecated. Deprecated in Java
+w: file:///C:/Users/yashs/flutter/packages/flutter_tools/gradle/src/main/kotlin/plugins/PluginHandler.kt:186:64 Unchecked cast: NamedDomainObjectContainer<out BuildType> to NamedDomainObjectContainer<BuildType>
+w: file:///C:/Users/yashs/flutter/packages/flutter_tools/gradle/src/main/kotlin/plugins/PluginHandler.kt:187:69 Unchecked cast: NamedDomainObjectContainer<out BuildType> to NamedDomainObjectContainer<BuildType>
+
+> Task :gradle:compileJava NO-SOURCE
+> Task :gradle:compileGroovy NO-SOURCE
+> Task :gradle:classes
+> Task :gradle:jar
+
+> Configure project :app
+w: file:///C:/Users/yashs/development/game_collection/android/app/build.gradle.kts:28:9: 'jvmTarget: String' is deprecated. Please migrate to the compilerOptions DSL. More details are here: https://kotl.in/u1r8ln
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:extractReleaseVersionControlInfo UP-TO-DATE
+> Task :app:cleanMergeReleaseAssets
+> Task :app:mergeReleaseShaders UP-TO-DATE
+> Task :app:compileReleaseShaders NO-SOURCE
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:compileFlutterBuildRelease
+> Task :app:packJniLibsflutterBuildRelease
+> Task :audioplayers_android:preBuild UP-TO-DATE
+> Task :audioplayers_android:preReleaseBuild UP-TO-DATE
+> Task :audioplayers_android:mergeReleaseShaders UP-TO-DATE
+> Task :audioplayers_android:compileReleaseShaders NO-SOURCE
+> Task :audioplayers_android:generateReleaseAssets UP-TO-DATE
+> Task :audioplayers_android:mergeReleaseAssets UP-TO-DATE
+> Task :device_info_plus:preBuild UP-TO-DATE
+> Task :device_info_plus:preReleaseBuild UP-TO-DATE
+> Task :device_info_plus:mergeReleaseShaders UP-TO-DATE
+> Task :device_info_plus:compileReleaseShaders NO-SOURCE
+> Task :device_info_plus:generateReleaseAssets UP-TO-DATE
+> Task :device_info_plus:mergeReleaseAssets UP-TO-DATE
+> Task :path_provider_android:preBuild UP-TO-DATE
+> Task :path_provider_android:preReleaseBuild UP-TO-DATE
+> Task :path_provider_android:mergeReleaseShaders UP-TO-DATE
+> Task :path_provider_android:compileReleaseShaders NO-SOURCE
+> Task :path_provider_android:generateReleaseAssets UP-TO-DATE
+> Task :path_provider_android:mergeReleaseAssets UP-TO-DATE
+> Task :shared_preferences_android:preBuild UP-TO-DATE
+> Task :shared_preferences_android:preReleaseBuild UP-TO-DATE
+> Task :shared_preferences_android:mergeReleaseShaders UP-TO-DATE
+> Task :shared_preferences_android:compileReleaseShaders NO-SOURCE
+> Task :shared_preferences_android:generateReleaseAssets UP-TO-DATE
+> Task :shared_preferences_android:mergeReleaseAssets UP-TO-DATE
+> Task :vibration:preBuild UP-TO-DATE
+> Task :vibration:preReleaseBuild UP-TO-DATE
+> Task :vibration:mergeReleaseShaders UP-TO-DATE
+> Task :vibration:compileReleaseShaders NO-SOURCE
+> Task :vibration:generateReleaseAssets UP-TO-DATE
+> Task :vibration:mergeReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseAssets
+> Task :audioplayers_android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :audioplayers_android:generateReleaseResValues UP-TO-DATE
+> Task :audioplayers_android:generateReleaseResources UP-TO-DATE
+> Task :audioplayers_android:packageReleaseResources UP-TO-DATE
+> Task :audioplayers_android:parseReleaseLocalResources UP-TO-DATE
+> Task :audioplayers_android:generateReleaseRFile UP-TO-DATE
+> Task :audioplayers_android:javaPreCompileRelease UP-TO-DATE
+> Task :device_info_plus:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :device_info_plus:generateReleaseResValues UP-TO-DATE
+> Task :device_info_plus:generateReleaseResources UP-TO-DATE
+> Task :device_info_plus:packageReleaseResources UP-TO-DATE
+> Task :device_info_plus:parseReleaseLocalResources UP-TO-DATE
+> Task :device_info_plus:generateReleaseRFile UP-TO-DATE
+> Task :device_info_plus:javaPreCompileRelease UP-TO-DATE
+> Task :path_provider_android:generateReleaseResValues UP-TO-DATE
+> Task :path_provider_android:generateReleaseResources UP-TO-DATE
+> Task :path_provider_android:packageReleaseResources UP-TO-DATE
+> Task :path_provider_android:parseReleaseLocalResources UP-TO-DATE
+> Task :path_provider_android:generateReleaseRFile UP-TO-DATE
+> Task :path_provider_android:javaPreCompileRelease UP-TO-DATE
+> Task :device_info_plus:compileReleaseKotlin
+
+> Task :audioplayers_android:compileReleaseKotlin
+w: file:///C:/Users/yashs/AppData/Local/Pub/Cache/hosted/pub.dev/audioplayers_android-5.2.1/android/src/main/kotlin/xyz/luan/audioplayers/AudioplayersPlugin.kt:72:30 'var isSpeakerphoneOn: Boolean' is deprecated. Deprecated in Java.
+w: file:///C:/Users/yashs/AppData/Local/Pub/Cache/hosted/pub.dev/audioplayers_android-5.2.1/android/src/main/kotlin/xyz/luan/audioplayers/player/WrappedPlayer.kt:172:22 'var isSpeakerphoneOn: Boolean' is deprecated. Deprecated in Java.
+
+> Task :path_provider_android:compileReleaseJavaWithJavac
+> Task :audioplayers_android:compileReleaseJavaWithJavac NO-SOURCE
+> Task :audioplayers_android:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :audioplayers_android:exportReleaseConsumerProguardFiles UP-TO-DATE
+> Task :device_info_plus:compileReleaseJavaWithJavac NO-SOURCE
+> Task :device_info_plus:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :device_info_plus:exportReleaseConsumerProguardFiles UP-TO-DATE
+> Task :path_provider_android:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :path_provider_android:exportReleaseConsumerProguardFiles UP-TO-DATE
+> Task :shared_preferences_android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared_preferences_android:generateReleaseResValues UP-TO-DATE
+> Task :shared_preferences_android:generateReleaseResources UP-TO-DATE
+> Task :shared_preferences_android:packageReleaseResources UP-TO-DATE
+> Task :shared_preferences_android:parseReleaseLocalResources UP-TO-DATE
+> Task :shared_preferences_android:generateReleaseRFile UP-TO-DATE
+> Task :shared_preferences_android:javaPreCompileRelease UP-TO-DATE
+> Task :vibration:generateReleaseResValues UP-TO-DATE
+> Task :vibration:generateReleaseResources UP-TO-DATE
+> Task :vibration:packageReleaseResources UP-TO-DATE
+> Task :vibration:parseReleaseLocalResources UP-TO-DATE
+> Task :vibration:generateReleaseRFile UP-TO-DATE
+> Task :vibration:javaPreCompileRelease UP-TO-DATE
+
+> Task :vibration:compileReleaseJavaWithJavac
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :vibration:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :vibration:exportReleaseConsumerProguardFiles UP-TO-DATE
+> Task :app:buildKotlinToolingMetadata UP-TO-DATE
+> Task :app:checkReleaseDuplicateClasses UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :audioplayers_android:writeReleaseAarMetadata UP-TO-DATE
+> Task :device_info_plus:writeReleaseAarMetadata UP-TO-DATE
+> Task :path_provider_android:writeReleaseAarMetadata UP-TO-DATE
+> Task :shared_preferences_android:writeReleaseAarMetadata UP-TO-DATE
+> Task :vibration:writeReleaseAarMetadata UP-TO-DATE
+> Task :app:checkReleaseAarMetadata UP-TO-DATE
+> Task :app:copyFlutterAssetsRelease
+> Task :app:generateReleaseResValues UP-TO-DATE
+> Task :app:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :app:generateReleaseResources UP-TO-DATE
+> Task :app:mergeReleaseResources UP-TO-DATE
+> Task :app:packageReleaseResources UP-TO-DATE
+> Task :app:parseReleaseLocalResources UP-TO-DATE
+> Task :app:createReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksRelease UP-TO-DATE
+> Task :audioplayers_android:extractDeepLinksRelease UP-TO-DATE
+> Task :audioplayers_android:processReleaseManifest UP-TO-DATE
+> Task :device_info_plus:extractDeepLinksRelease UP-TO-DATE
+> Task :device_info_plus:processReleaseManifest UP-TO-DATE
+> Task :path_provider_android:extractDeepLinksRelease UP-TO-DATE
+> Task :path_provider_android:processReleaseManifest UP-TO-DATE
+> Task :shared_preferences_android:extractDeepLinksRelease UP-TO-DATE
+> Task :shared_preferences_android:processReleaseManifest UP-TO-DATE
+> Task :vibration:extractDeepLinksRelease UP-TO-DATE
+> Task :vibration:processReleaseManifest UP-TO-DATE
+> Task :app:processReleaseMainManifest UP-TO-DATE
+> Task :app:outputReleaseAppLinkSettings UP-TO-DATE
+> Task :app:processReleaseManifest UP-TO-DATE
+> Task :app:processReleaseManifestForPackage UP-TO-DATE
+> Task :app:processReleaseResources UP-TO-DATE
+> Task :audioplayers_android:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :device_info_plus:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :vibration:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :app:javaPreCompileRelease UP-TO-DATE
+> Task :audioplayers_android:prepareReleaseArtProfile UP-TO-DATE
+> Task :device_info_plus:prepareReleaseArtProfile UP-TO-DATE
+> Task :path_provider_android:prepareReleaseArtProfile UP-TO-DATE
+> Task :shared_preferences_android:prepareReleaseArtProfile UP-TO-DATE
+> Task :vibration:prepareReleaseArtProfile UP-TO-DATE
+> Task :app:mergeReleaseArtProfile UP-TO-DATE
+> Task :audioplayers_android:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :path_provider_android:bundleLibCompileToJarRelease
+> Task :device_info_plus:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :vibration:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :app:extractProguardFiles UP-TO-DATE
+> Task :path_provider_android:bundleLibRuntimeToJarRelease
+> Task :audioplayers_android:processReleaseJavaRes
+> Task :device_info_plus:processReleaseJavaRes
+> Task :path_provider_android:processReleaseJavaRes NO-SOURCE
+> Task :vibration:processReleaseJavaRes NO-SOURCE
+> Task :app:mergeReleaseStartupProfile UP-TO-DATE
+> Task :app:configureCMakeRelease[arm64-v8a]
+> Task :app:buildCMakeRelease[arm64-v8a]
+> Task :app:configureCMakeRelease[armeabi-v7a]
+> Task :app:buildCMakeRelease[armeabi-v7a]
+> Task :app:configureCMakeRelease[x86_64]
+> Task :app:buildCMakeRelease[x86_64]
+> Task :app:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :audioplayers_android:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :audioplayers_android:mergeReleaseNativeLibs NO-SOURCE
+> Task :audioplayers_android:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :device_info_plus:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :device_info_plus:mergeReleaseNativeLibs NO-SOURCE
+> Task :device_info_plus:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :path_provider_android:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :path_provider_android:mergeReleaseNativeLibs NO-SOURCE
+> Task :path_provider_android:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :shared_preferences_android:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :shared_preferences_android:mergeReleaseNativeLibs NO-SOURCE
+> Task :shared_preferences_android:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :vibration:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :vibration:mergeReleaseNativeLibs NO-SOURCE
+> Task :vibration:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :app:mergeReleaseNativeLibs UP-TO-DATE
+> Task :app:stripReleaseDebugSymbols UP-TO-DATE
+> Task :app:writeReleaseAppMetadata UP-TO-DATE
+> Task :shared_preferences_android:compileReleaseKotlin
+> Task :app:collectReleaseDependencies
+> Task :shared_preferences_android:compileReleaseJavaWithJavac
+> Task :shared_preferences_android:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :shared_preferences_android:exportReleaseConsumerProguardFiles UP-TO-DATE
+> Task :shared_preferences_android:bundleLibCompileToJarRelease
+> Task :shared_preferences_android:bundleLibRuntimeToJarRelease
+> Task :shared_preferences_android:processReleaseJavaRes
+> Task :app:configureReleaseDependencies
+> Task :app:extractReleaseNativeSymbolTables UP-TO-DATE
+> Task :audioplayers_android:createFullJarRelease UP-TO-DATE
+> Task :audioplayers_android:extractProguardFiles UP-TO-DATE
+> Task :audioplayers_android:generateReleaseLintModel UP-TO-DATE
+> Task :audioplayers_android:prepareLintJarForPublish UP-TO-DATE
+> Task :device_info_plus:createFullJarRelease UP-TO-DATE
+> Task :device_info_plus:extractProguardFiles UP-TO-DATE
+> Task :device_info_plus:generateReleaseLintModel UP-TO-DATE
+> Task :device_info_plus:prepareLintJarForPublish UP-TO-DATE
+> Task :path_provider_android:createFullJarRelease
+> Task :path_provider_android:extractProguardFiles UP-TO-DATE
+> Task :path_provider_android:generateReleaseLintModel
+> Task :path_provider_android:prepareLintJarForPublish UP-TO-DATE
+> Task :shared_preferences_android:createFullJarRelease
+> Task :shared_preferences_android:extractProguardFiles UP-TO-DATE
+> Task :shared_preferences_android:generateReleaseLintModel
+> Task :shared_preferences_android:prepareLintJarForPublish UP-TO-DATE
+> Task :vibration:createFullJarRelease UP-TO-DATE
+> Task :vibration:extractProguardFiles UP-TO-DATE
+> Task :vibration:generateReleaseLintModel UP-TO-DATE
+> Task :vibration:prepareLintJarForPublish UP-TO-DATE
+> Task :audioplayers_android:stripReleaseDebugSymbols NO-SOURCE
+> Task :audioplayers_android:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :audioplayers_android:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :audioplayers_android:extractReleaseAnnotations UP-TO-DATE
+> Task :audioplayers_android:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :audioplayers_android:mergeReleaseJavaResource UP-TO-DATE
+> Task :audioplayers_android:syncReleaseLibJars UP-TO-DATE
+> Task :audioplayers_android:bundleReleaseLocalLintAar
+> Task :device_info_plus:stripReleaseDebugSymbols NO-SOURCE
+> Task :device_info_plus:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :device_info_plus:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :device_info_plus:extractReleaseAnnotations UP-TO-DATE
+> Task :device_info_plus:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :device_info_plus:mergeReleaseJavaResource UP-TO-DATE
+> Task :device_info_plus:syncReleaseLibJars UP-TO-DATE
+> Task :device_info_plus:bundleReleaseLocalLintAar
+> Task :path_provider_android:stripReleaseDebugSymbols NO-SOURCE
+> Task :path_provider_android:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :path_provider_android:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :path_provider_android:extractReleaseAnnotations UP-TO-DATE
+> Task :path_provider_android:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :path_provider_android:mergeReleaseJavaResource UP-TO-DATE
+> Task :path_provider_android:syncReleaseLibJars
+> Task :path_provider_android:bundleReleaseLocalLintAar
+> Task :shared_preferences_android:stripReleaseDebugSymbols NO-SOURCE
+> Task :shared_preferences_android:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :shared_preferences_android:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :shared_preferences_android:extractReleaseAnnotations UP-TO-DATE
+> Task :shared_preferences_android:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :shared_preferences_android:mergeReleaseJavaResource UP-TO-DATE
+> Task :shared_preferences_android:syncReleaseLibJars
+> Task :shared_preferences_android:bundleReleaseLocalLintAar
+> Task :vibration:stripReleaseDebugSymbols NO-SOURCE
+> Task :vibration:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :vibration:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :vibration:extractReleaseAnnotations UP-TO-DATE
+> Task :vibration:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :vibration:mergeReleaseJavaResource UP-TO-DATE
+> Task :vibration:syncReleaseLibJars UP-TO-DATE
+> Task :vibration:bundleReleaseLocalLintAar
+> Task :audioplayers_android:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :device_info_plus:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :path_provider_android:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :shared_preferences_android:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :vibration:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :audioplayers_android:generateReleaseLintVitalModel UP-TO-DATE
+> Task :device_info_plus:generateReleaseLintVitalModel UP-TO-DATE
+> Task :path_provider_android:generateReleaseLintVitalModel
+> Task :shared_preferences_android:generateReleaseLintVitalModel
+> Task :vibration:generateReleaseLintVitalModel UP-TO-DATE
+> Task :app:parseReleaseIntegrityConfig UP-TO-DATE
+> Task :app:validateSigningRelease UP-TO-DATE
+> Task :app:compileReleaseKotlin
+> Task :app:compileReleaseJavaWithJavac
+> Task :app:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :app:processReleaseJavaRes
+> Task :app:mergeReleaseJavaResource UP-TO-DATE
+> Task :app:generateReleaseLintVitalReportModel
+> Task :app:expandReleaseArtProfileWildcards
+> Task :path_provider_android:lintVitalAnalyzeRelease
+> Task :vibration:lintVitalAnalyzeRelease
+
+> Task :app:minifyReleaseWithR8
+ERROR: Missing classes detected while running R8. Please add the missing classes or apply additional keep rules that are generated in C:\Users\yashs\development\game_collection\build\app\outputs\mapping\release\missing_rules.txt.
+ERROR: R8: Missing class com.google.android.play.core.splitcompat.SplitCompatApplication (referenced from: void io.flutter.embedding.android.FlutterPlayStoreSplitApplication.<init>() and 2 other contexts)
+Missing class com.google.android.play.core.splitinstall.SplitInstallException (referenced from: void io.flutter.embedding.engine.deferredcomponents.PlayStoreDeferredComponentManager.lambda$installDeferredComponent$1(int, java.lang.String, java.lang.Exception))
+Missing class com.google.android.play.core.splitinstall.SplitInstallManager (referenced from: com.google.android.play.core.splitinstall.SplitInstallManager io.flutter.embedding.engine.deferredcomponents.PlayStoreDeferredComponentManager.splitInstallManager and 5 other contexts)
+Missing class com.google.android.play.core.splitinstall.SplitInstallManagerFactory (referenced from: void io.flutter.embedding.engine.deferredcomponents.PlayStoreDeferredComponentManager.<init>(android.content.Context, io.flutter.embedding.engine.FlutterJNI))
+Missing class com.google.android.play.core.splitinstall.SplitInstallRequest$Builder (referenced from: void io.flutter.embedding.engine.deferredcomponents.PlayStoreDeferredComponentManager.installDeferredComponent(int, java.lang.String))
+Missing class com.google.android.play.core.splitinstall.SplitInstallRequest (referenced from: void io.flutter.embedding.engine.deferredcomponents.PlayStoreDeferredComponentManager.installDeferredComponent(int, java.lang.String))
+Missing class com.google.android.play.core.splitinstall.SplitInstallSessionState (referenced from: void io.flutter.embedding.engine.deferredcomponents.PlayStoreDeferredComponentManager$FeatureInstallStateUpdatedListener.onStateUpdate(com.google.android.play.core.splitinstall.SplitInstallSessionState) and 1 other context)
+Missing class com.google.android.play.core.splitinstall.SplitInstallStateUpdatedListener (referenced from: void io.flutter.embedding.engine.deferredcomponents.PlayStoreDeferredComponentManager.<init>(android.content.Context, io.flutter.embedding.engine.FlutterJNI) and 2 other contexts)
+Missing class com.google.android.play.core.tasks.OnFailureListener (referenced from: void io.flutter.embedding.engine.deferredcomponents.PlayStoreDeferredComponentManager.installDeferredComponent(int, java.lang.String))
+Missing class com.google.android.play.core.tasks.OnSuccessListener (referenced from: void io.flutter.embedding.engine.deferredcomponents.PlayStoreDeferredComponentManager.installDeferredComponent(int, java.lang.String))
+Missing class com.google.android.play.core.tasks.Task (referenced from: void io.flutter.embedding.engine.deferredcomponents.PlayStoreDeferredComponentManager.installDeferredComponent(int, java.lang.String) and 1 other context)
+
+> Task :app:minifyReleaseWithR8 FAILED
+> Task :device_info_plus:lintVitalAnalyzeRelease
+> Task :audioplayers_android:lintVitalAnalyzeRelease
+> Task :shared_preferences_android:lintVitalAnalyzeRelease
+
+[Incubating] Problems report is available at: file:///C:/Users/yashs/development/game_collection/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:minifyReleaseWithR8'.
+> A failure occurred while executing com.android.build.gradle.internal.tasks.R8Task$R8Runnable
+   > Compilation failed to complete
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 1m 22s
+223 actionable tasks: 53 executed, 170 up-to-date

@@ -203,7 +203,6 @@ class _SnakeGameWidgetState extends State<SnakeGameWidget> {
           Navigator.pop(context);
           Navigator.pop(context);
         },
-        showRewardedAdOption: true,
       ),
     );
   }

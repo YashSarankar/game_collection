@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'core/services/storage_service.dart';
-import 'core/services/ad_service.dart';
 import 'core/services/haptic_service.dart';
 import 'core/services/sound_service.dart';
 import 'core/providers/settings_provider.dart';
@@ -15,9 +13,6 @@ import 'ui/screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Mobile Ads
-  await MobileAds.instance.initialize();
 
   // Set preferred orientations and system UI style
   SystemChrome.setSystemUIOverlayStyle(
@@ -33,9 +28,6 @@ void main() async {
   final storageService = await StorageService.getInstance();
   final hapticService = await HapticService.getInstance();
   final soundService = await SoundService.getInstance();
-
-  // Initialize AdService
-  await AdService.getInstance();
 
   runApp(
     MultiProvider(

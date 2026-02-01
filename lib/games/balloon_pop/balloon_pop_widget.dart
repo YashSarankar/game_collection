@@ -298,7 +298,6 @@ class _BalloonPopWidgetState extends State<BalloonPopWidget>
             Navigator.pop(context);
             Navigator.pop(context);
           },
-          showRewardedAdOption: true,
         ),
       );
     });

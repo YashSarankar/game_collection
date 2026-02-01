@@ -100,7 +100,6 @@ class _BrickBreakerWidgetState extends State<BrickBreakerWidget> {
             Navigator.pop(context);
             Navigator.pop(context);
           },
-          showRewardedAdOption: true,
         ),
       );
     });

@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../core/models/game_model.dart';
 import '../../core/providers/coins_provider.dart';
 import '../../core/providers/score_provider.dart';
 
-import '../../core/services/ad_service.dart';
 import '../../core/services/haptic_service.dart';
 
 // import '../widgets/daily_reward_card.dart';
@@ -21,9 +19,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  AdService? _adService;
   HapticService? _hapticService;
-  BannerAd? _bannerAd;
   String _selectedFilter = 'All'; // 'All', 'Single', 'Multi'
 
   @override
@@ -33,12 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _initializeServices() async {
-    _adService = await AdService.getInstance();
     _hapticService = await HapticService.getInstance();
-
-    setState(() {
-      _bannerAd = _adService?.getBannerAd();
-    });
   }
 
   @override
@@ -55,9 +46,6 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute(builder: (context) => GameScreen(game: game)),
     );
-
-    // Show interstitial ad after returning from game
-    await _adService?.showInterstitialAd();
   }
 
   void _navigateToSettings() async {

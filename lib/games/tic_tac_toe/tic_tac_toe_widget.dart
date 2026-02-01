@@ -122,7 +122,6 @@ class _TicTacToeWidgetState extends State<TicTacToeWidget> {
             Navigator.pop(context);
             Navigator.pop(context);
           },
-          showRewardedAdOption: false,
         ),
       );
     });

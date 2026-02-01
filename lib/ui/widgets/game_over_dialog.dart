@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/score_provider.dart';
-import '../../core/providers/coins_provider.dart';
-import '../../core/services/ad_service.dart';
 import '../../core/services/haptic_service.dart';
 
 class GameOverDialog extends StatefulWidget {
@@ -10,7 +8,6 @@ class GameOverDialog extends StatefulWidget {
   final int score;
   final VoidCallback onRestart;
   final VoidCallback onHome;
-  final bool showRewardedAdOption;
   final String? customMessage;
 
   const GameOverDialog({
@@ -19,7 +16,6 @@ class GameOverDialog extends StatefulWidget {
     required this.score,
     required this.onRestart,
     required this.onHome,
-    this.showRewardedAdOption = false,
     this.customMessage,
   });
 
@@ -28,7 +24,6 @@ class GameOverDialog extends StatefulWidget {
 }
 
 class _GameOverDialogState extends State<GameOverDialog> {
-  AdService? _adService;
   HapticService? _hapticService;
   bool _isNewHighScore = false;
 
@@ -43,7 +38,6 @@ class _GameOverDialogState extends State<GameOverDialog> {
   }
 
   Future<void> _initializeServices() async {
-    _adService = await AdService.getInstance();
     _hapticService = await HapticService.getInstance();
   }
 
@@ -57,35 +51,6 @@ class _GameOverDialogState extends State<GameOverDialog> {
 
     if (isNew) {
       await _hapticService?.success();
-    }
-  }
-
-  Future<void> _watchAdForReward() async {
-    final canShow = _adService?.isRewardedAdReady ?? false;
-
-    if (canShow) {
-      await _adService?.showRewardedAd(
-        onUserEarnedReward: (reward) async {
-          // Give extra coins or retry
-          final coinsProvider = Provider.of<CoinsProvider>(
-            context,
-            listen: false,
-          );
-          await coinsProvider.addCoins(50);
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('You earned 50 bonus coins!')),
-            );
-          }
-        },
-      );
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ad not available right now')),
-        );
-      }
     }
   }
 
@@ -222,29 +187,6 @@ class _GameOverDialogState extends State<GameOverDialog> {
             ),
 
             const SizedBox(height: 24),
-
-            // Rewarded Ad Option
-            if (widget.showRewardedAdOption &&
-                (_adService?.isRewardedAdReady ?? false))
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: OutlinedButton.icon(
-                  onPressed: _watchAdForReward,
-                  icon: const Icon(Icons.play_circle_outline),
-                  label: const Text('Watch Ad for 50 Coins'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white, width: 2),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
 
             // Action Buttons
             Row(

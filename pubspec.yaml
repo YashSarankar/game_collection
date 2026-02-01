@@ -17,9 +17,6 @@ dependencies:
   # Game Engine
   flame: ^1.18.0
   
-  # Ad Monetization
-  google_mobile_ads: ^5.1.0
-  
   # Local Storage
   shared_preferences: ^2.2.3
   
