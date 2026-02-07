@@ -37,7 +37,6 @@ void main() async {
               SettingsProvider(storageService, hapticService, soundService),
         ),
         ChangeNotifierProvider(create: (_) => ScoreProvider(storageService)),
-        ChangeNotifierProvider(create: (_) => CoinsProvider(storageService)),
       ],
       child: const MyApp(),
     ),
