@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'core/services/storage_service.dart';
 import 'core/services/haptic_service.dart';
 import 'core/services/sound_service.dart';
+import 'core/services/ad_service.dart';
 import 'core/providers/settings_provider.dart';
 import 'core/providers/score_provider.dart';
 
@@ -27,6 +28,7 @@ void main() async {
   final storageService = await StorageService.getInstance();
   final hapticService = await HapticService.getInstance();
   final soundService = await SoundService.getInstance();
+  await AdService.getInstance();
 
   runApp(
     MultiProvider(

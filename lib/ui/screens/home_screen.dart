@@ -10,6 +10,7 @@ import 'settings_screen.dart';
 import 'game_screen.dart';
 import 'multiplayer_screen.dart';
 import 'search_screen.dart';
+import '../../core/services/ad_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -44,6 +45,11 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute(builder: (context) => GameScreen(game: game)),
     );
+
+    // Show Interstitial Ad when returning from game
+    if (!mounted) return;
+    final adService = await AdService.getInstance();
+    adService.showInterstitialAd();
   }
 
   void _navigateToSettings() async {
@@ -113,7 +119,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ..._buildFilteredCategories(scoreProvider, isDark),
               ],
             ),
-
             Positioned(
               bottom: 24,
               left: 20,
