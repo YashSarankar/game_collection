@@ -3,6 +3,9 @@ import 'dart:math' as math;
 
 enum PowerUpType { rapidFire, shield, speedBoost, spreadShot }
 
+// Sound callbacks
+typedef SoundCallback = void Function();
+
 class Ship {
   Offset position;
   Offset velocity;
@@ -87,6 +90,9 @@ class SpaceShooterDuelLogic {
   int _frameCount = 0;
   final int _fireDelay = 12; // ~200ms at 60fps
   final int _rapidFireDelay = 6; // ~100ms at 60fps
+
+  // Sound callback
+  SoundCallback? onShoot;
 
   final int maxHealth = 100;
   final double shipSpeed = 250.0; // Units per second
@@ -360,6 +366,8 @@ class SpaceShooterDuelLogic {
           ),
         );
       }
+
+      onShoot?.call(); // Play shooting sound
     }
   }
 
@@ -398,6 +406,8 @@ class SpaceShooterDuelLogic {
           ),
         );
       }
+
+      onShoot?.call(); // Play shooting sound
     }
   }
 

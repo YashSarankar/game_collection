@@ -5,7 +5,9 @@ import 'storage_service.dart';
 class SoundService {
   static SoundService? _instance;
   final StorageService _storage;
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  final AudioPlayer _dicePlayer = AudioPlayer();
+  final AudioPlayer _movePlayer = AudioPlayer();
+  final AudioPlayer _shootPlayer = AudioPlayer(); // Dedicated for rapid-fire shooting sounds
   bool _isSoundEnabled = true;
 
   SoundService._(this._storage);
@@ -21,7 +23,9 @@ class SoundService {
 
   Future<void> _initialize() async {
     _isSoundEnabled = await _storage.getSoundEnabled();
-    await _audioPlayer.setReleaseMode(ReleaseMode.stop);
+    await _dicePlayer.setReleaseMode(ReleaseMode.stop);
+    await _movePlayer.setReleaseMode(ReleaseMode.stop);
+    await _shootPlayer.setReleaseMode(ReleaseMode.stop);
   }
 
   Future<void> setSoundEnabled(bool enabled) async {
@@ -31,12 +35,37 @@ class SoundService {
 
   bool get isEnabled => _isSoundEnabled;
 
-  // Play sound effect
+  // Play sound effect (general - uses dice player)
   Future<void> playSound(String soundPath) async {
     if (!_isSoundEnabled) return;
 
     try {
-      await _audioPlayer.play(AssetSource(soundPath));
+      await _dicePlayer.stop();
+      await _dicePlayer.play(AssetSource(soundPath));
+    } catch (e) {
+      // Silently fail if sound file doesn't exist
+    }
+  }
+
+  // Play movement sound (non-blocking, uses separate player)
+  void playMoveSound(String soundPath) {
+    if (!_isSoundEnabled) return;
+
+    try {
+      _movePlayer.stop();
+      _movePlayer.play(AssetSource(soundPath));
+    } catch (e) {
+      // Silently fail if sound file doesn't exist
+    }
+  }
+
+  // Play shooting sound (for rapid-fire weapons, restarts from beginning each time)
+  void playShootSound(String soundPath) {
+    if (!_isSoundEnabled) return;
+
+    try {
+      _shootPlayer.stop();
+      _shootPlayer.play(AssetSource(soundPath));
     } catch (e) {
       // Silently fail if sound file doesn't exist
     }
@@ -77,6 +106,8 @@ class SoundService {
   }
 
   void dispose() {
-    _audioPlayer.dispose();
+    _dicePlayer.dispose();
+    _movePlayer.dispose();
+    _shootPlayer.dispose();
   }
 }

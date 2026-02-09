@@ -7,7 +7,6 @@ import 'core/services/haptic_service.dart';
 import 'core/services/sound_service.dart';
 import 'core/providers/settings_provider.dart';
 import 'core/providers/score_provider.dart';
-import 'core/providers/coins_provider.dart';
 
 import 'ui/screens/splash_screen.dart';
 

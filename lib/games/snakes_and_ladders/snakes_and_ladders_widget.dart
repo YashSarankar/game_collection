@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../core/models/game_model.dart';
 import '../../core/services/haptic_service.dart';
+import '../../core/services/sound_service.dart';
 import 'snakes_and_ladders_logic.dart';
 import '../../ui/widgets/game_countdown.dart';
 import '../../ui/widgets/game_over_dialog.dart';
@@ -26,6 +27,7 @@ class _SnakesAndLaddersWidgetState extends State<SnakesAndLaddersWidget>
   int diceValue = 1;
   bool canRoll = true;
   HapticService? _hapticService;
+  SoundService? _soundService;
   late AnimationController _diceController;
 
   @override
@@ -40,6 +42,7 @@ class _SnakesAndLaddersWidgetState extends State<SnakesAndLaddersWidget>
 
   Future<void> _initServices() async {
     _hapticService = await HapticService.getInstance();
+    _soundService = await SoundService.getInstance();
   }
 
   @override
@@ -84,6 +87,7 @@ class _SnakesAndLaddersWidgetState extends State<SnakesAndLaddersWidget>
     });
 
     _hapticService?.light();
+    _soundService?.playSound('sounds/dice_roll.mp3');
     _diceController.repeat();
 
     for (int i = 0; i < 8; i++) {
@@ -122,6 +126,9 @@ class _SnakesAndLaddersWidgetState extends State<SnakesAndLaddersWidget>
       if (mounted) _nextTurn();
       return;
     }
+
+    // Play move sound at the start of movement
+    _soundService?.playMoveSound('sounds/move_piece.mp3');
 
     for (int i = oldPos + 1; i <= targetPos; i++) {
       await Future.delayed(const Duration(milliseconds: 300));

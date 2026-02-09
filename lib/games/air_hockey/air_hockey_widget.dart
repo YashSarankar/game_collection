@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/models/game_model.dart';
 import '../../core/services/haptic_service.dart';
+import '../../core/services/sound_service.dart';
 import 'air_hockey_logic.dart';
 import '../../ui/widgets/game_countdown.dart';
 import 'dart:ui' as ui;
@@ -21,6 +22,7 @@ class _AirHockeyWidgetState extends State<AirHockeyWidget>
   bool isCountingDown = true;
   Timer? gameLoop;
   HapticService? _hapticService;
+  SoundService? _soundService;
 
   // Multi-touch tracking
   final Map<int, bool> _touchSlots = {}; // index -> isTopPlayer
@@ -32,13 +34,21 @@ class _AirHockeyWidgetState extends State<AirHockeyWidget>
     super.initState();
     logic = AirHockeyLogic();
     _initServices();
+    _setupSoundCallbacks();
   }
 
   Future<void> _initServices() async {
     _hapticService = await HapticService.getInstance();
+    _soundService = await SoundService.getInstance();
     if (mounted) {
       setState(() {});
     }
+  }
+
+  void _setupSoundCallbacks() {
+    // Sound callbacks removed - only goal sound is used
+    logic.onPaddleHit = null;
+    logic.onWallHit = null;
   }
 
   void _startGame() {
@@ -64,6 +74,7 @@ class _AirHockeyWidgetState extends State<AirHockeyWidget>
 
       if (logic.player1Score != oldP1 || logic.player2Score != oldP2) {
         _hapticService?.heavy();
+        _soundService?.playSound('sounds/airgoal.mp3'); // Air hockey goal sound
         _flashGoal();
         if (logic.player1Score >= 5 || logic.player2Score >= 5) {
           _showWinDialog(

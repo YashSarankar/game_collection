@@ -27,10 +27,16 @@ import '../../games/tug_of_war/tug_of_war_widget.dart';
 import '../../games/knife_hit/knife_hit_widget.dart';
 import '../../games/match_3/match_3_widget.dart';
 
-class GameScreen extends StatelessWidget {
+class GameScreen extends StatefulWidget {
   final GameModel game;
 
   const GameScreen({super.key, required this.game});
+
+  @override
+  State<GameScreen> createState() => _GameScreenState();
+}
+
+class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
@@ -41,59 +47,59 @@ class GameScreen extends StatelessWidget {
   }
 
   Widget _buildGameWidget() {
-    switch (game.type) {
+    switch (widget.game.type) {
       case GameType.snake:
-        return SnakeGameWidget(game: game);
+        return SnakeGameWidget(game: widget.game);
       case GameType.ticTacToe:
-        return TicTacToeWidget(game: game);
+        return TicTacToeWidget(game: widget.game);
       case GameType.brickBreaker:
-        return BrickBreakerWidget(game: game);
+        return BrickBreakerWidget(game: widget.game);
       case GameType.memoryMatch:
-        return MemoryMatchWidget(game: game);
+        return MemoryMatchWidget(game: widget.game);
       case GameType.balloonPop:
-        return BalloonPopWidget(game: game);
+        return BalloonPopWidget(game: widget.game);
       case GameType.pingPong:
-        return PingPongWidget(game: game);
+        return PingPongWidget(game: widget.game);
       case GameType.ludo:
-        return LudoWidget(game: game);
+        return LudoWidget(game: widget.game);
       case GameType.carrom:
-        return CarromWidget(game: game);
+        return CarromWidget(game: widget.game);
       case GameType.game2048:
-        return Game2048Widget(game: game);
+        return Game2048Widget(game: widget.game);
       case GameType.numberPuzzle:
-        return NumberPuzzleWidget(game: game);
+        return NumberPuzzleWidget(game: widget.game);
       case GameType.sudoku:
-        return SudokuWidget(game: game);
+        return SudokuWidget(game: widget.game);
       case GameType.waterSort:
-        return WaterSortWidget(game: game);
+        return WaterSortWidget(game: widget.game);
       case GameType.chess:
-        return ChessWidget(game: game);
+        return ChessWidget(game: widget.game);
       case GameType.snakesAndLadders:
-        return SnakesAndLaddersWidget(game: game);
+        return SnakesAndLaddersWidget(game: widget.game);
       case GameType.airHockey:
-        return AirHockeyWidget(game: game);
+        return AirHockeyWidget(game: widget.game);
       case GameType.tapDuel:
-        return TapDuelWidget(game: game);
+        return TapDuelWidget(game: widget.game);
       case GameType.dotsAndBoxes:
-        return DotsAndBoxesWidget(game: game);
+        return DotsAndBoxesWidget(game: widget.game);
       case GameType.spaceShooterDuel:
         return const SpaceShooterDuelWidget();
       case GameType.tankBattle:
         return const TankBattleWidget();
       case GameType.asteroids:
-        return AsteroidsWidget(game: game);
+        return AsteroidsWidget(game: widget.game);
       case GameType.nineMensMorris:
-        return NineMensMorrisWidget(game: game);
+        return NineMensMorrisWidget(game: widget.game);
       case GameType.wordBattle:
-        return WordBattleWidget(game: game);
+        return WordBattleWidget(game: widget.game);
       case GameType.reactionTimeBattle:
-        return ReactionTimeBattleWidget(game: game);
+        return ReactionTimeBattleWidget(game: widget.game);
       case GameType.tugOfWar:
-        return TugOfWarWidget(game: game);
+        return TugOfWarWidget(game: widget.game);
       case GameType.knifeHit:
-        return KnifeHitWidget(game: game);
+        return KnifeHitWidget(game: widget.game);
       case GameType.match3:
-        return Match3Widget(game: game);
+        return Match3Widget(game: widget.game);
     }
   }
 }

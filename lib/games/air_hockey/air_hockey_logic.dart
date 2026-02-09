@@ -20,6 +20,10 @@ class AirHockeyLogic {
 
   bool isGameOver = false;
 
+  // Callbacks for sound effects
+  VoidCallback? onPaddleHit;
+  VoidCallback? onWallHit;
+
   void initialize(Size size) {
     tableSize = size;
     resetPuck();
@@ -45,9 +49,11 @@ class AirHockeyLogic {
     if (puckPosition.dx - puckRadius < 0) {
       puckPosition = Offset(puckRadius, puckPosition.dy);
       puckVelocity = Offset(-puckVelocity.dx, puckVelocity.dy);
+      onWallHit?.call();
     } else if (puckPosition.dx + puckRadius > tableSize.width) {
       puckPosition = Offset(tableSize.width - puckRadius, puckPosition.dy);
       puckVelocity = Offset(-puckVelocity.dx, puckVelocity.dy);
+      onWallHit?.call();
     }
 
     // Goal Checking
@@ -60,6 +66,7 @@ class AirHockeyLogic {
       } else {
         puckPosition = Offset(puckPosition.dx, puckRadius);
         puckVelocity = Offset(puckVelocity.dx, -puckVelocity.dy);
+        onWallHit?.call();
       }
     } else if (puckPosition.dy > tableSize.height) {
       if (puckPosition.dx > (tableSize.width - goalWidth) / 2 &&
@@ -70,6 +77,7 @@ class AirHockeyLogic {
       } else {
         puckPosition = Offset(puckPosition.dx, tableSize.height - puckRadius);
         puckVelocity = Offset(puckVelocity.dx, -puckVelocity.dy);
+        onWallHit?.call();
       }
     }
 
@@ -103,6 +111,7 @@ class AirHockeyLogic {
       if (relativeVelocity < 0) {
         puckVelocity = (puckVelocity - normal * (2 * relativeVelocity)) * 0.9;
         puckVelocity += paddleVel * 0.5; // Transfer some paddle momentum
+        onPaddleHit?.call(); // Sound callback
       }
 
       // Ensure a minimum speed after hit

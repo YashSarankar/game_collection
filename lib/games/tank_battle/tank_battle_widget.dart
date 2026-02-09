@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:flutter/scheduler.dart';
-import 'tank_battle_logic.dart';
+import 'tank_battle_logic.dart';import '../../core/services/haptic_service.dart';
+import '../../core/services/sound_service.dart';
 import '../../ui/widgets/game_countdown.dart';
 import '../../ui/widgets/game_over_dialog.dart';
 
@@ -23,10 +24,27 @@ class _TankBattleWidgetState extends State<TankBattleWidget>
   Offset _p1MoveJoystick = Offset.zero;
   Offset _p2MoveJoystick = Offset.zero;
 
+  HapticService? _hapticService;
+  SoundService? _soundService;
+
   @override
   void initState() {
     super.initState();
     _logic = TankBattleLogic();
+    _initServices();
+    _setupSoundCallbacks();
+  }
+
+  Future<void> _initServices() async {
+    _hapticService = await HapticService.getInstance();
+    _soundService = await SoundService.getInstance();
+  }
+
+  void _setupSoundCallbacks() {
+    // Only shooting sound - movement and rotation sounds removed due to performance issues
+    _logic.onTankShoot = () {
+      _soundService?.playMoveSound('sounds/tank_shoot.mp3');
+    };
   }
 
   void _onCountdownFinished() {
@@ -542,7 +560,10 @@ class _TankBattleWidgetState extends State<TankBattleWidget>
         ),
         const SizedBox(height: 12),
         GestureDetector(
-          onTap: onFire,
+          onTap: () {
+            _soundService?.playShootSound('sounds/tank_shoot.mp3'); // Play shoot sound with instant restart
+            onFire();
+          },
           child: Container(
             width: 85,
             height: 85,

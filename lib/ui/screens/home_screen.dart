@@ -111,7 +111,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (_selectedFilter != 'Single')
                   SliverToBoxAdapter(child: _buildMultiplayerSection(isDark)),
                 ..._buildFilteredCategories(scoreProvider, isDark),
-                const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
             ),
 

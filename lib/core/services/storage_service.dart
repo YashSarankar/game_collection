@@ -49,61 +49,10 @@ class StorageService {
   }
 
   // Coins
-  Future<int> getTotalCoins() async {
-    return _prefs?.getInt(AppConstants.keyTotalCoins) ?? 0;
-  }
-
-  Future<bool> addCoins(int amount) async {
-    final current = await getTotalCoins();
-    return await _prefs?.setInt(AppConstants.keyTotalCoins, current + amount) ??
-        false;
-  }
-
-  Future<bool> spendCoins(int amount) async {
-    final current = await getTotalCoins();
-    if (current >= amount) {
-      return await _prefs?.setInt(
-            AppConstants.keyTotalCoins,
-            current - amount,
-          ) ??
-          false;
-    }
-    return false;
-  }
+  // REMOVED: Coins system removed from app
 
   // Daily Reward
-  Future<DateTime?> getLastDailyRewardClaim() async {
-    final int? timestamp = _prefs?.getInt(
-      AppConstants.keyDailyRewardLastClaimed,
-    );
-    if (timestamp == null) return null;
-    return DateTime.fromMillisecondsSinceEpoch(timestamp);
-  }
-
-  Future<bool> setDailyRewardClaimed() async {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    return await _prefs?.setInt(AppConstants.keyDailyRewardLastClaimed, now) ??
-        false;
-  }
-
-  Future<bool> canClaimDailyReward() async {
-    final lastClaim = await getLastDailyRewardClaim();
-    if (lastClaim == null) return true;
-
-    final difference = DateTime.now().difference(lastClaim);
-    return difference >= AppConstants.dailyRewardCooldown;
-  }
-
-  Future<DateTime?> getAppLaunchTime() async {
-    final int? timestamp = _prefs?.getInt(AppConstants.keyAppLaunchTime);
-    if (timestamp == null) return null;
-    return DateTime.fromMillisecondsSinceEpoch(timestamp);
-  }
-
-  Future<bool> setAppLaunchTime() async {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    return await _prefs?.setInt(AppConstants.keyAppLaunchTime, now) ?? false;
-  }
+  // REMOVED: Daily rewards system removed from app
 
   // Settings
   Future<bool> getSoundEnabled() async {

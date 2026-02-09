@@ -3,6 +3,9 @@ import 'dart:math' as math;
 
 enum PowerUpType { doubleDamage, rapidFire, shield, speedBoost }
 
+// Sound callbacks
+typedef SoundCallback = void Function();
+
 class Tank {
   Offset position;
   double rotation; // Tank body rotation
@@ -112,6 +115,9 @@ class TankBattleLogic {
 
   // Screen shake state
   double screenShake = 0.0;
+
+  // Sound callback - only for shooting (movement and rotation removed due to performance issues)
+  SoundCallback? onTankShoot;
 
   double timeRemaining = 120.0; // 2 minutes match
   int _lastFireFrame1 = 0;
@@ -486,6 +492,7 @@ class TankBattleLogic {
       final targetRotation = math.atan2(direction.dy, direction.dx);
       _smoothRotate(player1, targetRotation, dt);
       player1.treadAnimation = (player1.treadAnimation + dt * 10) % 1.0;
+      // Movement sound removed - was causing performance issues
     }
   }
 
@@ -503,6 +510,7 @@ class TankBattleLogic {
       final targetRotation = math.atan2(direction.dy, direction.dx);
       _smoothRotate(player2, targetRotation, dt);
       player2.treadAnimation = (player2.treadAnimation + dt * 10) % 1.0;
+      // Movement sound removed - was causing performance issues
     }
   }
 
@@ -521,10 +529,12 @@ class TankBattleLogic {
 
   void rotatePlayer1Turret(double delta) {
     player1.turretRotation += delta;
+    // Turret rotation sound removed - was causing performance issues
   }
 
   void rotatePlayer2Turret(double delta) {
     player2.turretRotation += delta;
+    // Turret rotation sound removed - was causing performance issues
   }
 
   bool _isPositionValid(Offset position, Tank tank) {
@@ -583,6 +593,7 @@ class TankBattleLogic {
       player1.recoilOffset = 8.0;
       player1.flashOpacity = 1.0;
       screenShake = 3.0;
+      onTankShoot?.call(); // Play shooting sound
     }
   }
 
@@ -611,6 +622,7 @@ class TankBattleLogic {
       player2.recoilOffset = 8.0;
       player2.flashOpacity = 1.0;
       screenShake = 3.0;
+      onTankShoot?.call(); // Play shooting sound
     }
   }
 

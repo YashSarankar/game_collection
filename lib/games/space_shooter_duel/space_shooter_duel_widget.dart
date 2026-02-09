@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:flutter/scheduler.dart';
 import 'space_shooter_duel_logic.dart';
+import '../../core/services/sound_service.dart';
 import '../../ui/widgets/game_countdown.dart';
 import '../../ui/widgets/game_over_dialog.dart';
 
@@ -24,10 +25,24 @@ class _SpaceShooterDuelWidgetState extends State<SpaceShooterDuelWidget>
   Offset _p1MoveJoystick = Offset.zero;
   Offset _p2MoveJoystick = Offset.zero;
 
+  SoundService? _soundService;
+
   @override
   void initState() {
     super.initState();
     _logic = SpaceShooterDuelLogic();
+    _initServices();
+    _setupSoundCallbacks();
+  }
+
+  Future<void> _initServices() async {
+    _soundService = await SoundService.getInstance();
+  }
+
+  void _setupSoundCallbacks() {
+    _logic.onShoot = () {
+      _soundService?.playMoveSound('sounds/space_shoot.mp3');
+    };
   }
 
   void _onCountdownFinished() {
@@ -102,6 +117,7 @@ class _SpaceShooterDuelWidgetState extends State<SpaceShooterDuelWidget>
   void _restartGame() {
     setState(() {
       _logic = SpaceShooterDuelLogic();
+      _setupSoundCallbacks(); // Re-setup sound callbacks for new logic instance
       _isCountingDown = true;
       _gameStarted = false;
       _isGameOver = false;
@@ -483,7 +499,10 @@ class _SpaceShooterDuelWidgetState extends State<SpaceShooterDuelWidget>
 
   Widget _buildFireButton(VoidCallback onFire, Color color) {
     return GestureDetector(
-      onTap: onFire,
+      onTap: () {
+        _soundService?.playShootSound('sounds/space_shoot.mp3'); // Play shoot sound with instant restart
+        onFire();
+      },
       child: Container(
         width: 80,
         height: 80,

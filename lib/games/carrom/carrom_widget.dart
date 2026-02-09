@@ -476,50 +476,104 @@ class _CarromWidgetState extends State<CarromWidget>
   }
 
   Widget _buildSetupScreen() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            widget.game.title,
-            style: const TextStyle(
-              fontSize: 48,
-              fontWeight: FontWeight.bold,
-              color: Colors.brown,
+          // Large Carrom Icon
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: widget.game.primaryColor.withOpacity(0.2),
+              border: Border.all(
+                color: widget.game.primaryColor,
+                width: 3,
+              ),
+            ),
+            child: Icon(
+              Icons.album_outlined,
+              size: 100,
+              color: widget.game.primaryColor,
             ),
           ),
           const SizedBox(height: 40),
-          const Text(
-            "Select Number of Players",
-            style: TextStyle(fontSize: 20, color: Colors.brown),
+
+          // Game Title
+          Text(
+            widget.game.title,
+            style: TextStyle(
+              fontSize: 48,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.brown[800],
+            ),
           ),
           const SizedBox(height: 20),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 20,
-            runSpacing: 20,
-            children: [2, 3, 4]
-                .map(
-                  (n) => ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.game.primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 30,
-                        vertical: 20,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                    onPressed: () => _startGame(n),
-                    child: Text(
-                      "$n Players",
-                      style: const TextStyle(fontSize: 18),
-                    ),
-                  ),
-                )
-                .toList(),
+
+          // Coming Soon Badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  widget.game.primaryColor,
+                  widget.game.primaryColor.withOpacity(0.7),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.game.primaryColor.withOpacity(0.4),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: const Text(
+              "COMING SOON",
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 3,
+              ),
+            ),
+          ),
+          const SizedBox(height: 30),
+
+          // Description
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              "We're working hard to bring you an amazing\nCarrom experience. Stay tuned!",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: isDark ? Colors.white70 : Colors.brown[600],
+                height: 1.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 50),
+
+          // Decorative elements
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              3,
+              (index) => Container(
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: widget.game.primaryColor.withOpacity(0.3 + (index * 0.2)),
+                ),
+              ),
+            ),
           ),
         ],
       ),

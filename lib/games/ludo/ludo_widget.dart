@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../core/models/game_model.dart';
 import '../../core/services/haptic_service.dart';
+import '../../core/services/sound_service.dart';
 import '../../ui/widgets/game_countdown.dart';
 
 enum LudoGameState { selection, countdown, playing }
@@ -39,6 +40,7 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
   bool canRoll = true;
   List<int> movablePieceIndices = [];
   HapticService? _hapticService;
+  SoundService? _soundService;
 
   LudoGameState _gameState = LudoGameState.selection;
   int _playerCount = 4;
@@ -66,6 +68,7 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
 
   Future<void> _initHaptic() async {
     _hapticService = await HapticService.getInstance();
+    _soundService = await SoundService.getInstance();
   }
 
   void _startGame(int playerCount) {
@@ -100,6 +103,10 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
     canRoll = true;
     movablePieceIndices = [];
     diceValue = 1;
+
+    // Play game start sound
+    _soundService?.playSound('sounds/game_start.mp3');
+
     setState(() {
       _gameState = LudoGameState.playing;
     });
@@ -116,13 +123,20 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
 
     _hapticService?.light();
 
-    // Random roll
+    // Play dice roll sound - await to ensure it plays before animation completes
+    await _soundService?.playSound('sounds/dice_roll.mp3');
+
+    // Generate final roll immediately
     int finalRoll = Random().nextInt(6) + 1;
 
-    // Animation
-    for (int i = 0; i < 6; i++) {
-      await Future.delayed(const Duration(milliseconds: 100));
-      if (mounted) setState(() => diceValue = Random().nextInt(6) + 1);
+    // Animation - 8 frames at 75ms = 600ms total for more dramatic rolling
+    for (int i = 0; i < 8; i++) {
+      await Future.delayed(const Duration(milliseconds: 75));
+      if (mounted) {
+        setState(() {
+          diceValue = Random().nextInt(6) + 1;
+        });
+      }
     }
 
     if (mounted) {
@@ -158,10 +172,13 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
 
     if (movablePieceIndices.isEmpty) {
       _nextTurn();
-    } else if (movablePieceIndices.length == 1 &&
-        pieces[movablePieceIndices.first].status != PieceStatus.locked) {
-      // Auto move if only one choice and not from base?
-      // Actually Ludo usually requires a tap. Let's keep it manual.
+    } else if (movablePieceIndices.length == 1 && diceValue != 6) {
+      // Auto-move if only one piece can move and didn't roll a 6
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted && movablePieceIndices.isNotEmpty) {
+          _movePiece(movablePieceIndices.first);
+        }
+      });
     }
   }
 
@@ -174,6 +191,8 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
     _hapticService?.selectionClick();
 
     if (piece.status == PieceStatus.locked) {
+      // Play move sound once when moving piece from base
+      _soundService?.playMoveSound('sounds/move_piece.mp3');
       setState(() {
         piece.position = 1;
         piece.status = PieceStatus.active;
@@ -184,12 +203,16 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
       return;
     }
 
+    // Play move sound once at the start of movement
+    _soundService?.playMoveSound('sounds/move_piece.mp3');
+
     // Incremental movement animation
     int steps = diceValue;
     for (int i = 0; i < steps; i++) {
       await Future.delayed(const Duration(milliseconds: 200));
       if (!mounted) return;
       _hapticService?.light();
+      // No sound in loop - only haptic feedback
       setState(() {
         piece.position++;
         if (piece.position > 51 && piece.position <= 57) {
@@ -222,6 +245,8 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
               other.position = 0;
               other.status = PieceStatus.locked;
             });
+            // Play down piece sound for capture
+            _soundService?.playMoveSound('sounds/down_piece.mp3');
             captured = true;
           }
         }
@@ -748,6 +773,7 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
     final rc = _getRC(p);
     final pos = _getCoordinate(p, boardWidth);
     final isMovable = movablePieceIndices.contains(pieces.indexOf(p));
+    final isCurrentPlayerPiece = p.playerIndex == currentPlayerIndex;
 
     final cellW = _getPixelSize(rc.dy.toInt(), boardWidth);
     final cellH = _getPixelSize(rc.dx.toInt(), boardWidth);
@@ -761,11 +787,14 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
         .withLightness((hsl.lightness - 0.2).clamp(0.0, 1.0))
         .toColor();
 
+    // Elevation offset for current player's pieces
+    final elevationOffset = isCurrentPlayerPiece ? 4.0 : 0.0;
+
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOutBack,
       left: pos.dx,
-      top: pos.dy,
+      top: pos.dy - elevationOffset,
       child: GestureDetector(
         onTap: () => _movePiece(pieces.indexOf(p)),
         child: SizedBox(
@@ -777,7 +806,7 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
             children: [
               // 3D Cylinder Base
               Positioned(
-                bottom: 2,
+                bottom: 2 + elevationOffset,
                 child: Container(
                   width: cellSize * 0.75,
                   height: cellSize * 0.5,
@@ -786,9 +815,9 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(cellSize),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.4),
-                        blurRadius: 6,
-                        offset: const Offset(0, 4),
+                        color: Colors.black.withOpacity(isCurrentPlayerPiece ? 0.5 : 0.4),
+                        blurRadius: isCurrentPlayerPiece ? 10 : 6,
+                        offset: Offset(0, isCurrentPlayerPiece ? 6 : 4),
                       ),
                     ],
                   ),
@@ -796,7 +825,7 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
               ),
               // Piece Top
               Positioned(
-                bottom: cellSize * 0.2,
+                bottom: cellSize * 0.2 + elevationOffset,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: isMovable ? cellSize * 0.85 : cellSize * 0.75,
@@ -818,6 +847,12 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
                           color: color.withOpacity(0.7),
                           blurRadius: 15,
                           spreadRadius: 3,
+                        ),
+                      if (isCurrentPlayerPiece && !isMovable)
+                        BoxShadow(
+                          color: color.withOpacity(0.4),
+                          blurRadius: 8,
+                          spreadRadius: 1,
                         ),
                     ],
                   ),
@@ -1018,36 +1053,35 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
       padding: const EdgeInsets.symmetric(vertical: 24),
       child: Column(
         children: [
+          // Professional dice container
           GestureDetector(
-            onTap: rollDice,
+            onTap: canRoll && !isRolling ? rollDice : null,
             child: Container(
-              width: 80,
-              height: 80,
+              width: 90,
+              height: 90,
               decoration: BoxDecoration(
-                color: isDark ? Colors.grey[850] : Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: playerColors[currentPlayerIndex],
-                  width: 4,
+                  color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+                  width: 2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
-                    blurRadius: 10,
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 8,
+                    spreadRadius: 1,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: isRolling
-                  ? Center(
-                      child: CircularProgressIndicator(
-                        color: playerColors[currentPlayerIndex],
-                      ),
-                    )
-                  : _buildDiceDots(diceValue, playerColors[currentPlayerIndex]),
+                  ? _buildRollingDice()
+                  : _buildProfessionalDiceFace(diceValue),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          // Status text
           Text(
             canRoll
                 ? 'Tap to Roll'
@@ -1056,7 +1090,9 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
                       : 'No moves available'),
             style: TextStyle(
               color: isDark ? Colors.white70 : Colors.grey[700],
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+              letterSpacing: 0.5,
             ),
           ),
         ],
@@ -1064,71 +1100,89 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildDiceDots(int value, Color color) {
+  Widget _buildRollingDice() {
+    // Simple rolling indicator - just show changing dice values
+    return _buildProfessionalDiceFace(diceValue);
+  }
+
+  Widget _buildProfessionalDiceFace(int value) {
+    // Professional dice face with proper dots arrangement
     return Container(
       padding: const EdgeInsets.all(12),
-      child: GridView.count(
-        crossAxisCount: 3,
-        mainAxisSpacing: 4,
-        crossAxisSpacing: 4,
-        physics: const NeverScrollableScrollPhysics(),
-        children: List.generate(9, (index) {
-          bool showDot = false;
-          switch (value) {
-            case 1:
-              if (index == 4) showDot = true;
-              break;
-            case 2:
-              if (index == 2 || index == 6) showDot = true;
-              break;
-            case 3:
-              if (index == 2 || index == 4 || index == 6) showDot = true;
-              break;
-            case 4:
-              if (index == 0 || index == 2 || index == 6 || index == 8)
-                showDot = true;
-              break;
-            case 5:
-              if (index == 0 ||
-                  index == 2 ||
-                  index == 4 ||
-                  index == 6 ||
-                  index == 8)
-                showDot = true;
-              break;
-            case 6:
-              if (index == 0 ||
-                  index == 2 ||
-                  index == 3 ||
-                  index == 5 ||
-                  index == 6 ||
-                  index == 8)
-                showDot = true;
-              break;
-          }
-          return Center(
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: showDot ? color : Colors.transparent,
-                shape: BoxShape.circle,
-                boxShadow: showDot
-                    ? [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 1,
-                          offset: const Offset(1, 1),
-                        ),
-                      ]
-                    : null,
-              ),
-            ),
-          );
-        }),
+      child: CustomPaint(
+        painter: DiceDotsPainter(value: value),
+        size: const Size(66, 66),
       ),
     );
   }
+}
+
+// Professional dice dots painter
+class DiceDotsPainter extends CustomPainter {
+  final int value;
+
+  DiceDotsPainter({required this.value});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final dotPaint = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.fill;
+
+    final double dotRadius = size.width * 0.08;
+    final double quarterW = size.width * 0.25;
+    final double halfW = size.width * 0.5;
+    final double threeQuarterW = size.width * 0.75;
+    final double quarterH = size.height * 0.25;
+    final double halfH = size.height * 0.5;
+    final double threeQuarterH = size.height * 0.75;
+
+    // Draw dots based on dice value
+    switch (value) {
+      case 1:
+        // Center dot
+        canvas.drawCircle(Offset(halfW, halfH), dotRadius, dotPaint);
+        break;
+      case 2:
+        // Top-right and bottom-left
+        canvas.drawCircle(Offset(threeQuarterW, quarterH), dotRadius, dotPaint);
+        canvas.drawCircle(Offset(quarterW, threeQuarterH), dotRadius, dotPaint);
+        break;
+      case 3:
+        // Top-right, center, bottom-left
+        canvas.drawCircle(Offset(threeQuarterW, quarterH), dotRadius, dotPaint);
+        canvas.drawCircle(Offset(halfW, halfH), dotRadius, dotPaint);
+        canvas.drawCircle(Offset(quarterW, threeQuarterH), dotRadius, dotPaint);
+        break;
+      case 4:
+        // Four corners
+        canvas.drawCircle(Offset(quarterW, quarterH), dotRadius, dotPaint);
+        canvas.drawCircle(Offset(threeQuarterW, quarterH), dotRadius, dotPaint);
+        canvas.drawCircle(Offset(quarterW, threeQuarterH), dotRadius, dotPaint);
+        canvas.drawCircle(Offset(threeQuarterW, threeQuarterH), dotRadius, dotPaint);
+        break;
+      case 5:
+        // Four corners + center
+        canvas.drawCircle(Offset(quarterW, quarterH), dotRadius, dotPaint);
+        canvas.drawCircle(Offset(threeQuarterW, quarterH), dotRadius, dotPaint);
+        canvas.drawCircle(Offset(halfW, halfH), dotRadius, dotPaint);
+        canvas.drawCircle(Offset(quarterW, threeQuarterH), dotRadius, dotPaint);
+        canvas.drawCircle(Offset(threeQuarterW, threeQuarterH), dotRadius, dotPaint);
+        break;
+      case 6:
+        // Two columns of three
+        canvas.drawCircle(Offset(quarterW, quarterH), dotRadius, dotPaint);
+        canvas.drawCircle(Offset(quarterW, halfH), dotRadius, dotPaint);
+        canvas.drawCircle(Offset(quarterW, threeQuarterH), dotRadius, dotPaint);
+        canvas.drawCircle(Offset(threeQuarterW, quarterH), dotRadius, dotPaint);
+        canvas.drawCircle(Offset(threeQuarterW, halfH), dotRadius, dotPaint);
+        canvas.drawCircle(Offset(threeQuarterW, threeQuarterH), dotRadius, dotPaint);
+        break;
+    }
+  }
+
+  @override
+  bool shouldRepaint(DiceDotsPainter oldDelegate) => oldDelegate.value != value;
 }
 
 class TrianglePainter extends CustomPainter {

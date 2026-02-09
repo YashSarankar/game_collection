@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/models/game_model.dart';
 import '../../core/services/haptic_service.dart';
+import '../../core/services/sound_service.dart';
 import '../../ui/widgets/game_over_dialog.dart';
 import '../../ui/widgets/game_countdown.dart';
 import 'chess_logic.dart';
@@ -34,11 +35,13 @@ class _ChessWidgetState extends State<ChessWidget> {
   int _blackTime = 300;
 
   HapticService? _hapticService;
+  SoundService? _soundService;
 
   @override
   void initState() {
     super.initState();
     _initHaptic();
+    _initSound();
     _resetBoard();
   }
 
@@ -50,6 +53,10 @@ class _ChessWidgetState extends State<ChessWidget> {
 
   Future<void> _initHaptic() async {
     _hapticService = await HapticService.getInstance();
+  }
+
+  Future<void> _initSound() async {
+    _soundService = await SoundService.getInstance();
   }
 
   void _resetBoard() {
@@ -144,6 +151,15 @@ class _ChessWidgetState extends State<ChessWidget> {
   void _makeMove(int fromR, int fromC, int toR, int toC) {
     _hapticService?.light();
 
+    // Check if there's a capture happening
+    final isCapture = chessBoard.board[toR][toC] != null;
+
+    // Check for en passant capture
+    final piece = chessBoard.board[fromR][fromC];
+    final isEnPassantCapture = piece?.type == PieceType.pawn &&
+        fromC != toC &&
+        chessBoard.board[toR][toC] == null;
+
     // Check for promotion (default to queen for simplicity in this UI version)
     PieceType? promoteTo;
     if (chessBoard.board[fromR][fromC]?.type == PieceType.pawn &&
@@ -158,6 +174,14 @@ class _ChessWidgetState extends State<ChessWidget> {
       validMoves = [];
       _checkGameState();
     });
+
+    // Play appropriate sound based on whether it's a capture or regular move
+    if (isCapture || isEnPassantCapture) {
+      _soundService?.playMoveSound('sounds/down_piece.mp3');
+      _hapticService?.medium();
+    } else {
+      _soundService?.playMoveSound('sounds/move_piece.mp3');
+    }
 
     if (!isGameOver && _isVsAI && chessBoard.turn == PlayerColor.black) {
       // AI Move

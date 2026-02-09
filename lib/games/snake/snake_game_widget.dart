@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../core/models/game_model.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/services/haptic_service.dart';
+import '../../core/services/sound_service.dart';
 import '../../ui/widgets/game_countdown.dart';
 import '../../ui/widgets/game_over_dialog.dart';
 
@@ -35,6 +36,7 @@ class _SnakeGameWidgetState extends State<SnakeGameWidget> {
 
   Timer? gameTimer;
   HapticService? _hapticService;
+  SoundService? _soundService;
 
   @override
   void initState() {
@@ -45,6 +47,7 @@ class _SnakeGameWidgetState extends State<SnakeGameWidget> {
 
   Future<void> _initializeServices() async {
     _hapticService = await HapticService.getInstance();
+    _soundService = await SoundService.getInstance();
   }
 
   @override
@@ -124,6 +127,7 @@ class _SnakeGameWidgetState extends State<SnakeGameWidget> {
         score += 10;
         _generateFood();
         _hapticService?.light();
+        _soundService?.playMoveSound('sounds/snake_eat.mp3');
       } else {
         snake.removeLast();
       }
