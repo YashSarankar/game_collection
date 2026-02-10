@@ -2,7 +2,7 @@ name: game_collection
 description: "SnapPlay - 30+ Offline Mini Games Collection: Ludo, Chess, Carrom & more."
 publish_to: 'none'
 
-version: 1.0.1+2
+version: 1.0.2+4
 
 environment:
   sdk: ^3.10.4
