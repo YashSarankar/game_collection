@@ -12,6 +12,10 @@
 -dontwarn com.google.android.play.core.**
 -dontwarn com.google.android.gms.internal.**
 
+# AdMob Proguard Rules (Safeguard)
+-keep class com.google.android.gms.ads.** { *; }
+-keep class com.google.ads.** { *; }
+
 
 
 # Lottie Proguard Rules
