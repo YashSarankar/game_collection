@@ -117,6 +117,7 @@ export default function SnapPlayLanding() {
                     </div>
                     <div className="flex items-center gap-6 text-sm text-slate-500">
                         <a href="https://sarankar.com" className="hover:text-white transition-colors">Developer Website</a>
+                        <a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a>
                         <a href="mailto:support@sarankar.com" className="hover:text-white transition-colors">Support</a>
                     </div>
                     <p className="text-sm text-slate-600">

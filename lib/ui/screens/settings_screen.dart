@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/providers/score_provider.dart';
@@ -23,6 +24,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _initializeServices() async {
     _hapticService = await HapticService.getInstance();
+  }
+
+  Future<void> _launchURL(String urlString) async {
+    final Uri url = Uri.parse(urlString);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not launch $urlString')));
+      }
+    }
   }
 
   @override
@@ -158,10 +170,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
             isDark: isDark,
             children: [
               _buildNavigationTile(
+                title: 'Privacy Policy',
+                icon: Icons.privacy_tip_rounded,
+                iconColor: Colors.blueAccent,
+                onTap: () => _launchURL('https://sarankar.com/privacy'),
+                isDark: isDark,
+              ),
+              _buildNavigationTile(
+                title: 'Rate SnapPlay',
+                icon: Icons.star_rate_rounded,
+                iconColor: Colors.amber,
+                onTap: () => _launchURL(
+                  'https://play.google.com/store/apps/details?id=com.snapplay.offline.games',
+                ),
+                isDark: isDark,
+              ),
+              _buildNavigationTile(
                 title: 'Version',
                 icon: Icons.info_rounded,
                 iconColor: Colors.grey,
-                value: '1.0.0',
+                value: '1.0.2',
                 onTap: null, // Read-only
                 isDark: isDark,
               ),
