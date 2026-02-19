@@ -117,6 +117,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (_selectedFilter != 'Single')
                   SliverToBoxAdapter(child: _buildMultiplayerSection(isDark)),
                 ..._buildFilteredCategories(scoreProvider, isDark),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 40, bottom: 120),
+                    child: Column(
+                      children: [
+                        Text(
+                          'MADE WITH ❤️ BY',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 4,
+                            color: isDark ? Colors.white24 : Colors.black26,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'SarankarDevelopers',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1,
+                            color: isDark ? Colors.white38 : Colors.black38,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
             Positioned(

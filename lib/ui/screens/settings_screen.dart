@@ -186,17 +186,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 isDark: isDark,
               ),
               _buildNavigationTile(
+                title: 'Developer',
+                icon: Icons.code_rounded,
+                iconColor: Colors.deepPurple,
+                value: 'SarankarDevelopers',
+                onTap: () => _launchURL('https://sarankar.com'),
+                isDark: isDark,
+              ),
+              _buildNavigationTile(
                 title: 'Version',
                 icon: Icons.info_rounded,
                 iconColor: Colors.grey,
-                value: '1.0.2',
+                value: '1.0.3',
                 onTap: null, // Read-only
                 isDark: isDark,
               ),
             ],
           ),
 
-          const SizedBox(height: 40),
+          const SizedBox(height: 24),
+
+          Center(
+            child: Column(
+              children: [
+                Text(
+                  'Designed & Developed with ❤️ by',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white24 : Colors.black26,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'SarankarDevelopers',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1,
+                    color: isDark ? Colors.white38 : Colors.black38,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 100),
         ],
       ),
     );
