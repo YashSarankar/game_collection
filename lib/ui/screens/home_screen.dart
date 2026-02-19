@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'dart:math';
+import 'package:carousel_slider/carousel_slider.dart';
 import '../../core/models/game_model.dart';
 import '../../core/providers/score_provider.dart';
 import '../../core/services/haptic_service.dart';
@@ -22,6 +23,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   HapticService? _hapticService;
   String _selectedFilter = 'All'; // 'All', 'Single', 'Multi'
+  int _currentHeroIndex = 0;
 
   @override
   void initState() {
@@ -218,92 +220,127 @@ class _HomeScreenState extends State<HomeScreen> {
       allGames[(dailyIndex + 12) % allGames.length],
     ];
 
-    return Container(
-      height: 160,
-      margin: EdgeInsets.zero,
-      child: PageView.builder(
-        itemCount: heroGames.length,
-        controller: PageController(viewportFraction: 0.9),
-        itemBuilder: (context, index) {
-          final game = heroGames[index];
-          return _buildHeroCard(game, isDark, isMain: index == 0);
-        },
-      ),
+    return Column(
+      children: [
+        CarouselSlider.builder(
+          itemCount: heroGames.length,
+          itemBuilder: (context, index, realIndex) {
+            final game = heroGames[index];
+            return _buildHeroCard(game, isDark, isMain: index == 0);
+          },
+          options: CarouselOptions(
+            height: 150, // Slightly more height to accommodate the larger width
+            viewportFraction: 1,
+            enlargeCenterPage: true,
+            enlargeStrategy: CenterPageEnlargeStrategy.scale,
+            autoPlay: true,
+            autoPlayInterval: Duration(seconds: 10),
+            autoPlayCurve: Curves.easeInOut,
+            onPageChanged: (index, reason) {
+              setState(() => _currentHeroIndex = index);
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: heroGames.asMap().entries.map((entry) {
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: _currentHeroIndex == entry.key ? 18 : 8,
+              height: 8,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4),
+                color: (isDark ? Colors.white : Colors.black).withOpacity(
+                  _currentHeroIndex == entry.key ? 0.7 : 0.2,
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
   Widget _buildHeroCard(GameModel game, bool isDark, {bool isMain = true}) {
     return GestureDetector(
       onTap: () => _navigateToGame(game),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [game.primaryColor, game.secondaryColor],
-          ),
-          border: Border.all(color: Colors.white.withOpacity(0.2), width: 1.5),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              right: -15,
-              bottom: -15,
-              child: Icon(
-                game.icon,
-                size: 120,
-                color: Colors.white.withOpacity(0.15),
-              ),
+      child: Padding(
+        padding: const EdgeInsets.only(left: 10, right: 10, top: 10),
+        child: Container(
+          width: double.infinity,
+          margin: EdgeInsets.zero,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [game.primaryColor, game.secondaryColor],
             ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      isMain ? '🌟 GAME OF THE DAY' : '✨ FEATURED FOR YOU',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.5,
+            border: Border.all(
+              color: Colors.white.withOpacity(0.2),
+              width: 1.5,
+            ),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -15,
+                bottom: -15,
+                child: Icon(
+                  game.icon,
+                  size: 120,
+                  color: Colors.white.withOpacity(0.15),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        isMain ? '🌟 GAME OF THE DAY' : '✨ FEATURED FOR YOU',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                     ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    game.title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
+                    const Spacer(),
+                    Text(
+                      game.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    game.subtitle,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
+                    const SizedBox(height: 2),
+                    Text(
+                      game.subtitle,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -539,7 +576,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () => _navigateToGame(game),
       child: Container(
-        height: isLarge ? 180 : 140,
+        height: 160,
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
           borderRadius: BorderRadius.circular(24),

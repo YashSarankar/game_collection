@@ -49,6 +49,7 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
 
   LudoGameState _gameState = LudoGameState.selection;
   int _playerCount = 4;
+  List<int> finishedPlayers = []; // Indices of players who completed the game
 
   final List<Color> playerColors = LudoTheme.playerColors;
   final List<int> startGlobalIndices = [0, 13, 26, 39];
@@ -99,6 +100,7 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
     }
 
     currentPlayerIndex = activePlayers.first;
+    finishedPlayers = [];
     canRoll = true;
     movablePieceIndices = [];
     diceValue = 1;
@@ -167,7 +169,7 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
     if (movablePieceIndices.isEmpty) {
       _nextTurn();
     } else if (movablePieceIndices.length == 1 && diceValue != 6) {
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 400), () {
         if (mounted && movablePieceIndices.isNotEmpty) {
           _movePiece(movablePieceIndices.first);
         }
@@ -197,7 +199,8 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
 
     int steps = diceValue;
     for (int i = 0; i < steps; i++) {
-      await Future.delayed(const Duration(milliseconds: 200));
+      // Smoother, natural steps
+      await Future.delayed(Duration(milliseconds: i == 0 ? 100 : 150));
       if (!mounted) return;
       _hapticService?.light();
       setState(() {
@@ -256,7 +259,7 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
   }
 
   void _nextTurn() async {
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
     List<int> activePlayers = [];
@@ -268,10 +271,31 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
       activePlayers = [0, 1, 2, 3];
     }
 
+    // Filter out players who have already finished
+    List<int> remainingPlayers = activePlayers
+        .where((p) => !finishedPlayers.contains(p))
+        .toList();
+
+    if (remainingPlayers.isEmpty) return;
+
     setState(() {
-      int currentActiveIdx = activePlayers.indexOf(currentPlayerIndex);
-      int nextActiveIdx = (currentActiveIdx + 1) % activePlayers.length;
-      currentPlayerIndex = activePlayers[nextActiveIdx];
+      int currentInRemaining = remainingPlayers.indexOf(currentPlayerIndex);
+      // If the current player just finished, the index might be -1.
+      // We handle that by finding the next player in the rotation.
+      int nextIdx;
+      if (currentInRemaining == -1) {
+        // Find who WOULD have been next in the full activePlayers list
+        int currentInFull = activePlayers.indexOf(currentPlayerIndex);
+        int searchIdx = (currentInFull + 1) % activePlayers.length;
+        while (!remainingPlayers.contains(activePlayers[searchIdx])) {
+          searchIdx = (searchIdx + 1) % activePlayers.length;
+        }
+        nextIdx = remainingPlayers.indexOf(activePlayers[searchIdx]);
+      } else {
+        nextIdx = (currentInRemaining + 1) % remainingPlayers.length;
+      }
+
+      currentPlayerIndex = remainingPlayers[nextIdx];
       canRoll = true;
     });
   }
@@ -284,18 +308,32 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
               p.status == PieceStatus.finished,
         )
         .length;
-    if (finishedCount == 4) {
+
+    if (finishedCount == 4 && !finishedPlayers.contains(currentPlayerIndex)) {
       _soundService?.playSound('sounds/victory.mp3');
+      setState(() {
+        finishedPlayers.add(currentPlayerIndex);
+      });
+
+      // Calculate if the game is over (only one player left)
+      List<int> activePlayers = _playerCount == 2
+          ? [0, 2]
+          : (_playerCount == 3 ? [0, 1, 2] : [0, 1, 2, 3]);
+      bool isGameOver = finishedPlayers.length >= activePlayers.length - 1;
+
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => _buildVictoryOverlay(),
+        builder: (context) => _buildVictoryOverlay(isGameOver: isGameOver),
       );
     }
   }
 
-  Widget _buildVictoryOverlay() {
-    final color = playerColors[currentPlayerIndex];
+  Widget _buildVictoryOverlay({required bool isGameOver}) {
+    final winnerIndex = finishedPlayers.last;
+    final color = playerColors[winnerIndex];
+    final rank = finishedPlayers.length;
+    final rankSuffix = ['st', 'nd', 'rd', 'th'][rank - 1];
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -323,12 +361,12 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 24),
             Text(
-              'VICTORY!',
+              rank == 1 ? 'VICTORY!' : '$rank$rankSuffix PLACE!',
               style: LudoTheme.headerStyle(context).copyWith(fontSize: 40),
             ),
             const SizedBox(height: 16),
             Text(
-              '${_getPlayerName(currentPlayerIndex)} Player is the Master!',
+              '${_getPlayerName(winnerIndex)} Player is the Master!',
               textAlign: TextAlign.center,
               style: LudoTheme.bodyStyle(context).copyWith(fontSize: 18),
             ),
@@ -336,7 +374,11 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                setState(() => _gameState = LudoGameState.selection);
+                if (isGameOver) {
+                  setState(() => _gameState = LudoGameState.selection);
+                } else {
+                  _nextTurn();
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: color,
@@ -349,9 +391,11 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
                   borderRadius: BorderRadius.circular(30),
                 ),
               ),
-              child: const Text(
-                'PLAY AGAIN',
-                style: TextStyle(
+              child: Text(
+                isGameOver
+                    ? 'FINISH'
+                    : 'CONTINUE FOR ${rank + 1}${['st', 'nd', 'rd', 'th'][rank > 3 ? 3 : rank]}',
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.2,
                 ),
@@ -439,10 +483,15 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
           const AnimatedLudoBackground(),
           SafeArea(
             child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32.0,
+                  vertical: 24.0,
+                ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Hero(
                       tag: 'ludo_logo',
