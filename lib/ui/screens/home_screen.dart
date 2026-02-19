@@ -211,14 +211,15 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHeroSection(bool isDark) {
     final allGames = GamesList.allGames;
     final dailyIndex = _getDailyIndex(allGames.length);
+    final gameOfTheDay = allGames[dailyIndex];
 
-    // Select 3 games: One "Game of the Day" and two other featured games
-    // We use offsets to ensure they are always different
-    final heroGames = [
-      allGames[dailyIndex],
-      allGames[(dailyIndex + 5) % allGames.length],
-      allGames[(dailyIndex + 12) % allGames.length],
-    ];
+    final chessGame = allGames.firstWhere((g) => g.id == 'chess');
+    final ludoGame = allGames.firstWhere((g) => g.id == 'ludo');
+
+    final heroGames = <GameModel>[];
+    heroGames.add(gameOfTheDay);
+    if (chessGame.id != gameOfTheDay.id) heroGames.add(chessGame);
+    if (ludoGame.id != gameOfTheDay.id) heroGames.add(ludoGame);
 
     return Column(
       children: [
