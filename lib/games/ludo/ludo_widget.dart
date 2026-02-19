@@ -122,7 +122,6 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
     });
 
     _hapticService?.light();
-    await _soundService?.playSound('sounds/dice_roll.mp3');
 
     int finalRoll = math.Random().nextInt(6) + 1;
 

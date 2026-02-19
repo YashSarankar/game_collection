@@ -87,7 +87,7 @@ class _SnakesAndLaddersWidgetState extends State<SnakesAndLaddersWidget>
     });
 
     _hapticService?.light();
-    _soundService?.playSound('sounds/dice_roll.mp3');
+
     _diceController.repeat();
 
     for (int i = 0; i < 8; i++) {
