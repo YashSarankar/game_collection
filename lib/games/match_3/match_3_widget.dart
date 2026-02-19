@@ -1,13 +1,21 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/models/game_model.dart';
 import '../../core/services/haptic_service.dart';
 import '../../core/services/sound_service.dart';
+import 'logic/match_3_controller.dart';
+import 'match_3_theme.dart';
+import 'models/tile_model.dart';
+import 'models/game_event.dart';
+import 'components/tile_widget.dart';
 
+// ═══════════════════════════════════════════════════════════════
+// Entry point: Match3Widget
+// ═══════════════════════════════════════════════════════════════
 class Match3Widget extends StatefulWidget {
   final GameModel game;
-
   const Match3Widget({super.key, required this.game});
 
   @override
@@ -16,545 +24,303 @@ class Match3Widget extends StatefulWidget {
 
 class _Match3WidgetState extends State<Match3Widget>
     with TickerProviderStateMixin {
-  static const int rows = 8;
-  static const int cols = 8;
-  static const int tileTypes = 6;
+  // ── Services (loaded in background) ─────────────────────────
+  HapticService? _haptic;
+  SoundService? _sound;
 
-  late List<List<int>> _grid;
-  int? _dragStartRow;
-  int? _dragStartCol;
+  // ── Controller (initialized immediately) ─────────────────────
+  late Match3Controller _ctrl;
+  StreamSubscription? _eventSub;
 
-  int _score = 0;
-  int _moves = 30;
-  int _targetScore = 2000;
+  // ── Game state ────────────────────────────────────────────────
   int _level = 1;
-  double _comboMultiplier = 1.0;
-
-  bool _isProcessing = false;
-  bool _isGameOver = false;
-  bool _isLevelComplete = false;
-  bool _isInitialized = false;
+  int _targetScore = 2000;
   bool _gameStarted = false;
-  bool _isShuffling = false;
+  bool _gameOver = false;
+  bool _levelComplete = false;
 
-  late HapticService _hapticService;
-  late SoundService _soundService;
+  // ── UI State ──────────────────────────────────────────────────
+  double _shakeX = 0, _shakeY = 0;
+  final List<_FloatingText> _floatingTexts = [];
 
-  final List<List<Color>> _gemGradients = [
-    [const Color(0xFFFF5252), const Color(0xFFD32F2F)], // Red
-    [const Color(0xFF448AFF), const Color(0xFF1976D2)], // Blue
-    [const Color(0xFF69F0AE), const Color(0xFF388E3C)], // Green
-    [const Color(0xFFFFE57F), const Color(0xFFFBC02D)], // Yellow
-    [const Color(0xFFE040FB), const Color(0xFF7B1FA2)], // Purple
-    [const Color(0xFFFFAB40), const Color(0xFFE65100)], // Orange
-  ];
+  // ── Animation Controllers ─────────────────────────────────────
+  late AnimationController _pulseCtrl;
+  late AnimationController _bgCtrl;
+  late AnimationController _scoreBarCtrl;
+  late Animation<double> _scoreBarAnim;
 
-  final List<IconData> _tileIcons = [
-    Icons.favorite_rounded,
-    Icons.star_rounded,
-    Icons.diamond_rounded,
-    Icons.brightness_7_rounded,
-    Icons.bolt_rounded,
-    Icons.auto_awesome_rounded,
-  ];
+  // ── Grid interaction ──────────────────────────────────────────
+  int? _dragRow, _dragCol;
+
+  // ── Hint state ────────────────────────────────────────────────
+  Timer? _hintTimer;
+  ({int r1, int c1, int r2, int c2})? _hintMove;
 
   @override
   void initState() {
     super.initState();
-    _initializeServices();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+
+    _bgCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 20),
+    )..repeat();
+
+    _scoreBarCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _scoreBarAnim = Tween<double>(
+      begin: 0,
+      end: 0,
+    ).animate(CurvedAnimation(parent: _scoreBarCtrl, curve: Curves.easeOut));
+
+    // Initialize game controller immediately — no async blocking
+    _setupController();
+
+    // Load services in background (optional enhancements)
+    _initServicesBackground();
   }
 
-  Future<void> _initializeServices() async {
-    _hapticService = await HapticService.getInstance();
-    _soundService = await SoundService.getInstance();
-    _initGrid();
-    if (mounted) {
-      setState(() {
-        _isInitialized = true;
+  void _initServicesBackground() {
+    HapticService.getInstance().then((h) {
+      if (mounted) _haptic = h;
+    });
+    SoundService.getInstance().then((s) {
+      if (mounted) _sound = s;
+    });
+  }
+
+  void _setupController() {
+    _ctrl = Match3Controller(level: _level, targetScore: _targetScore);
+    _eventSub?.cancel();
+    _eventSub = _ctrl.events.listen(_onGameEvent);
+    _scheduleHint();
+  }
+
+  void _onGameEvent(GameEvent e) {
+    if (!mounted) return;
+    switch (e.type) {
+      case GameEventType.match:
+        _haptic?.medium();
+        _sound?.playPoint();
+        break;
+      case GameEventType.combo:
+        _haptic?.heavy();
+        _addFloatingText(e.message ?? 'GREAT!', _comboColor(e.message));
+        _triggerShake();
+        break;
+      case GameEventType.shake:
+        _triggerShake();
+        break;
+      case GameEventType.gameOver:
+        _sound?.playGameOver();
+        if (mounted) setState(() => _gameOver = true);
+        break;
+      case GameEventType.levelComplete:
+        _sound?.playSuccess();
+        if (mounted) setState(() => _levelComplete = true);
+        break;
+      default:
+        break;
+    }
+    // Update score bar
+    _updateScoreBar();
+  }
+
+  Color _comboColor(String? msg) {
+    if (msg == 'INCREDIBLE!') return const Color(0xFFFFD700);
+    if (msg == 'AWESOME!') return const Color(0xFFFF80AB);
+    return const Color(0xFF69F0AE);
+  }
+
+  void _updateScoreBar() {
+    final newValue = (_ctrl.score / _targetScore).clamp(0.0, 1.0);
+    _scoreBarAnim = Tween<double>(
+      begin: _scoreBarAnim.value,
+      end: newValue,
+    ).animate(CurvedAnimation(parent: _scoreBarCtrl, curve: Curves.easeOut));
+    _scoreBarCtrl.forward(from: 0);
+  }
+
+  void _scheduleHint() {
+    _hintTimer?.cancel();
+    _hintTimer = Timer(const Duration(seconds: 5), _showHint);
+  }
+
+  void _showHint() {
+    final hint = _ctrl.findHintMove();
+    if (hint != null && mounted) {
+      setState(() => _hintMove = hint);
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) setState(() => _hintMove = null);
       });
     }
   }
 
-  void _initGrid() {
-    _grid = List.generate(rows, (r) => List.generate(cols, (c) => -1));
-    do {
-      for (int r = 0; r < rows; r++) {
-        for (int c = 0; c < cols; c++) {
-          int type;
-          do {
-            type = math.Random().nextInt(tileTypes);
-          } while (_isInstantMatch(r, c, type));
-          _grid[r][c] = type;
-        }
-      }
-    } while (!_hasPossibleMoves());
+  void _resetHintTimer() {
+    _hintMove = null;
+    _scheduleHint();
   }
 
-  bool _isInstantMatch(int row, int col, int type) {
-    if (row >= 2 && _grid[row - 1][col] == type && _grid[row - 2][col] == type)
-      return true;
-    if (col >= 2 && _grid[row][col - 1] == type && _grid[row][col - 2] == type)
-      return true;
-    return false;
+  Future<void> _triggerShake() async {
+    for (int i = 0; i < 5; i++) {
+      if (!mounted) break;
+      setState(() {
+        _shakeX = (math.Random().nextDouble() - 0.5) * 14;
+        _shakeY = (math.Random().nextDouble() - 0.5) * 14;
+      });
+      await Future.delayed(const Duration(milliseconds: 30));
+    }
+    if (mounted)
+      setState(() {
+        _shakeX = 0;
+        _shakeY = 0;
+      });
   }
 
-  void _onPanStart(DragStartDetails details, double tileSize) {
-    if (_isProcessing || _isGameOver || _isLevelComplete) return;
-
-    final int col = (details.localPosition.dx / tileSize).floor();
-    final int row = (details.localPosition.dy / tileSize).floor();
-
-    if (row >= 0 && row < rows && col >= 0 && col < cols) {
-      _dragStartRow = row;
-      _dragStartCol = col;
-    }
-  }
-
-  void _onPanUpdate(DragUpdateDetails details, double tileSize) {
-    if (_dragStartRow == null || _dragStartCol == null || _isProcessing) return;
-
-    final double dx =
-        details.localPosition.dx - (_dragStartCol! * tileSize + tileSize / 2);
-    final double dy =
-        details.localPosition.dy - (_dragStartRow! * tileSize + tileSize / 2);
-
-    const double swipeThreshold = 0.4; // 40% of tile size
-    final double threshold = tileSize * swipeThreshold;
-
-    int targetRow = _dragStartRow!;
-    int targetCol = _dragStartCol!;
-
-    if (dx.abs() > dy.abs()) {
-      if (dx.abs() > threshold) {
-        targetCol = _dragStartCol! + (dx > 0 ? 1 : -1);
-      }
-    } else {
-      if (dy.abs() > threshold) {
-        targetRow = _dragStartRow! + (dy > 0 ? 1 : -1);
-      }
-    }
-
-    if (targetRow != _dragStartRow || targetCol != _dragStartCol) {
-      if (targetRow >= 0 &&
-          targetRow < rows &&
-          targetCol >= 0 &&
-          targetCol < cols) {
-        _swapTiles(_dragStartRow!, _dragStartCol!, targetRow, targetCol);
-        _dragStartRow = null;
-        _dragStartCol = null;
-      }
-    }
-  }
-
-  Future<void> _swapTiles(int r1, int c1, int r2, int c2) async {
-    if (!_gameStarted) {
-      setState(() => _gameStarted = true);
-    }
-
-    setState(() {
-      _isProcessing = true;
+  void _addFloatingText(String text, Color color) {
+    final ft = _FloatingText(text: text, color: color, key: UniqueKey());
+    setState(() => _floatingTexts.add(ft));
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (mounted) setState(() => _floatingTexts.remove(ft));
     });
+  }
 
-    // Swap items in grid
-    int temp = _grid[r1][c1];
-    _grid[r1][c1] = _grid[r2][c2];
-    _grid[r2][c2] = temp;
-
-    if (_hasMatches()) {
-      _moves--;
-      _comboMultiplier = 1.0;
-      await _processMatches();
-    } else {
-      // Swap back if no match
+  Future<void> _doSwap(int r1, int c1, int r2, int c2) async {
+    _resetHintTimer();
+    final success = await _ctrl.swapTiles(r1, c1, r2, c2);
+    if (!success) {
+      _haptic?.error();
+    }
+    if (_ctrl.score >= _targetScore) {
       await Future.delayed(const Duration(milliseconds: 300));
-      setState(() {
-        int tempBack = _grid[r1][c1];
-        _grid[r1][c1] = _grid[r2][c2];
-        _grid[r2][c2] = tempBack;
-      });
-      _hapticService.error();
-    }
-
-    setState(() {
-      _isProcessing = false;
-      _checkGameState();
-    });
-
-    // After movement, check if the board is deadlocked
-    if (!_isGameOver && !_isLevelComplete && !_hasPossibleMoves()) {
-      _shuffleBoard();
-    }
-  }
-
-  bool _hasPossibleMoves() {
-    for (int r = 0; r < rows; r++) {
-      for (int c = 0; c < cols; c++) {
-        // Try horizontal swap
-        if (c < cols - 1) {
-          _swapInGrid(r, c, r, c + 1);
-          if (_hasMatches()) {
-            _swapInGrid(r, c, r, c + 1); // swap back
-            return true;
-          }
-          _swapInGrid(r, c, r, c + 1); // swap back
-        }
-        // Try vertical swap
-        if (r < rows - 1) {
-          _swapInGrid(r, c, r + 1, c);
-          if (_hasMatches()) {
-            _swapInGrid(r, c, r + 1, c); // swap back
-            return true;
-          }
-          _swapInGrid(r, c, r + 1, c); // swap back
-        }
+      if (mounted) {
+        setState(() => _levelComplete = true);
+        _sound?.playSuccess();
+      }
+    } else if (_ctrl.moves <= 0 && !_ctrl.isProcessing) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (mounted) {
+        setState(() => _gameOver = true);
+        _sound?.playGameOver();
       }
     }
-    return false;
   }
 
-  void _swapInGrid(int r1, int c1, int r2, int c2) {
-    int temp = _grid[r1][c1];
-    _grid[r1][c1] = _grid[r2][c2];
-    _grid[r2][c2] = temp;
-  }
-
-  Future<void> _shuffleBoard() async {
-    setState(() {
-      _isProcessing = true;
-      _isShuffling = true;
-    });
-    await Future.delayed(const Duration(seconds: 1));
-
-    _hapticService.medium();
-
-    // Simple shuffle: just randomize until moves exist
-    do {
-      for (int r = 0; r < rows; r++) {
-        for (int c = 0; c < cols; c++) {
-          int type;
-          do {
-            type = math.Random().nextInt(tileTypes);
-          } while (_isInstantMatch(r, c, type));
-          _grid[r][c] = type;
-        }
-      }
-    } while (!_hasPossibleMoves());
-
-    setState(() {
-      _isProcessing = false;
-      _isShuffling = false;
-    });
-  }
-
-  bool _hasMatches() {
-    for (int r = 0; r < rows; r++) {
-      for (int c = 0; c < cols; c++) {
-        if (_grid[r][c] == -1) continue;
-        if (c <= cols - 3 &&
-            _grid[r][c] == _grid[r][c + 1] &&
-            _grid[r][c] == _grid[r][c + 2])
-          return true;
-        if (r <= rows - 3 &&
-            _grid[r][c] == _grid[r + 1][c] &&
-            _grid[r][c] == _grid[r + 2][c])
-          return true;
-      }
-    }
-    return false;
-  }
-
-  Future<void> _processMatches() async {
-    while (_hasMatches()) {
-      List<List<bool>> matched = List.generate(
-        rows,
-        (r) => List.generate(cols, (c) => false),
-      );
-
-      for (int r = 0; r < rows; r++) {
-        for (int c = 0; c <= cols - 3; c++) {
-          int type = _grid[r][c];
-          if (type != -1 &&
-              _grid[r][c + 1] == type &&
-              _grid[r][c + 2] == type) {
-            matched[r][c] = true;
-            matched[r][c + 1] = true;
-            matched[r][c + 2] = true;
-          }
-        }
-      }
-
-      for (int r = 0; r <= rows - 3; r++) {
-        for (int c = 0; c < cols; c++) {
-          int type = _grid[r][c];
-          if (type != -1 &&
-              _grid[r + 1][c] == type &&
-              _grid[r + 2][c] == type) {
-            matched[r][c] = true;
-            matched[r + 1][c] = true;
-            matched[r + 2][c] = true;
-          }
-        }
-      }
-
-      int count = 0;
-      for (int r = 0; r < rows; r++) {
-        for (int c = 0; c < cols; c++) {
-          if (matched[r][c]) {
-            _grid[r][c] = -1;
-            count++;
-          }
-        }
-      }
-
-      setState(() {
-        _score += (count * 10 * _level * _comboMultiplier).round();
-        _comboMultiplier += 0.5;
-      });
-      _hapticService.medium();
-      _soundService.playPoint();
-      await Future.delayed(const Duration(milliseconds: 400));
-
-      await _fallTiles();
-      await Future.delayed(const Duration(milliseconds: 400));
-    }
-  }
-
-  Future<void> _fallTiles() async {
-    setState(() {
-      for (int c = 0; c < cols; c++) {
-        int emptySpot = rows - 1;
-        for (int r = rows - 1; r >= 0; r--) {
-          if (_grid[r][c] != -1) {
-            if (emptySpot != r) {
-              _grid[emptySpot][c] = _grid[r][c];
-              _grid[r][c] = -1;
-            }
-            emptySpot--;
-          }
-        }
-        for (int r = emptySpot; r >= 0; r--) {
-          _grid[r][c] = math.Random().nextInt(tileTypes);
-        }
-      }
-    });
-  }
-
-  void _checkGameState() {
-    if (_score >= _targetScore) {
-      _isLevelComplete = true;
-      _soundService.playSuccess();
-    } else if (_moves <= 0) {
-      _isGameOver = true;
-      _soundService.playGameOver();
-    }
+  void _startGame() {
+    _sound?.playGameStart();
+    setState(() => _gameStarted = true);
+    _scheduleHint();
   }
 
   void _resetGame() {
+    _hintTimer?.cancel();
+    _setupController();
     setState(() {
-      _score = 0;
-      _moves = 30;
+      _gameStarted = false;
+      _gameOver = false;
+      _levelComplete = false;
       _level = 1;
       _targetScore = 2000;
-      _isGameOver = false;
-      _isLevelComplete = false;
-      _gameStarted = false;
-      _initGrid();
+      _floatingTexts.clear();
+      _hintMove = null;
     });
+    _updateScoreBar();
   }
 
   void _nextLevel() {
+    _hintTimer?.cancel();
     setState(() {
       _level++;
-      _targetScore += 1000;
-      _moves = 30;
-      _isLevelComplete = false;
-      _initGrid();
+      _targetScore += 1500;
+      _gameOver = false;
+      _levelComplete = false;
+      _floatingTexts.clear();
+      _hintMove = null;
     });
+    _setupController();
+    _updateScoreBar();
   }
 
   @override
+  void dispose() {
+    _hintTimer?.cancel();
+    _eventSub?.cancel();
+    _pulseCtrl.dispose();
+    _bgCtrl.dispose();
+    _scoreBarCtrl.dispose();
+    super.dispose();
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // BUILD
+  // ═══════════════════════════════════════════════════════════════
+  @override
   Widget build(BuildContext context) {
-    if (!_isInitialized) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    final brightness = Theme.of(context).brightness;
-    final isDark = brightness == Brightness.dark;
-
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isDark
-                ? [const Color(0xFF1F1C2C), const Color(0xFF121212)]
-                : [const Color(0xFFE0EAFC), const Color(0xFFCFDEF3)],
-          ),
-        ),
-        child: Stack(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
           children: [
-            Column(
-              children: [
-                _buildTopBar(isDark),
-                _buildHeader(isDark),
-                Expanded(child: _buildGridInteraction(isDark)),
-                _buildFooter(isDark),
-              ],
-            ),
-            if (!_gameStarted && !_isGameOver && !_isLevelComplete)
-              _buildMenu(isDark),
-            if (_isGameOver) _buildGameOverOverlay(isDark),
-            if (_isLevelComplete) _buildLevelCompleteOverlay(isDark),
-            if (_isShuffling) _buildShuffleIndicator(),
-            _buildBackArrow(isDark),
-          ],
-        ),
-      ),
-    );
-  }
+            // Animated background
+            _AnimatedBg(controller: _bgCtrl),
 
-  Widget _buildShuffleIndicator() {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-        decoration: BoxDecoration(
-          color: Colors.black87,
-          borderRadius: BorderRadius.circular(40),
-          border: Border.all(color: Colors.pinkAccent.withOpacity(0.5)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.pinkAccent.withOpacity(0.3),
-              blurRadius: 20,
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.shuffle_rounded,
-              color: Colors.pinkAccent,
-              size: 40,
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              "NO MOVES!",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                fontSize: 18,
-              ),
-            ),
-            Text(
-              "SHUFFLING BOARD...",
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenu(bool isDark) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            isDark
-                ? Colors.black.withOpacity(0.8)
-                : Colors.white.withOpacity(0.9),
-            isDark ? Colors.black : Colors.white,
-          ],
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
-              border: Border.all(
-                color: (isDark ? Colors.white10 : Colors.black12),
-              ),
-            ),
-            child: Icon(
-              widget.game.icon,
-              size: 80,
-              color: widget.game.primaryColor,
-            ),
-          ),
-          const SizedBox(height: 30),
-          Text(
-            widget.game.title.toUpperCase(),
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black87,
-              fontSize: 54,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 8,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            "MATCH 3 TO CLEAR",
-            style: TextStyle(
-              color: (isDark ? Colors.white : Colors.black).withOpacity(0.5),
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 80),
-          GestureDetector(
-            onTap: () {
-              _soundService.playGameStart();
-              setState(() => _gameStarted = true);
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 70, vertical: 22),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    widget.game.primaryColor,
-                    widget.game.secondaryColor,
+            // Main game UI
+            Transform.translate(
+              offset: Offset(_shakeX, _shakeY),
+              child: SafeArea(
+                child: Column(
+                  children: [
+                    _buildTopBar(),
+                    _buildHeader(),
+                    _buildScoreBar(),
+                    const SizedBox(height: 8),
+                    Expanded(child: _buildGrid()),
+                    _buildBoosterBar(),
+                    const SizedBox(height: 10),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(40),
-                boxShadow: [
-                  BoxShadow(
-                    color: widget.game.primaryColor.withOpacity(0.4),
-                    blurRadius: 25,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: const Text(
-                "PLAY NOW",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 2,
-                  color: Colors.white,
-                ),
               ),
             ),
-          ),
-          const SizedBox(height: 40),
-          Text(
-            "TARGET: $_targetScore POINTS",
-            style: TextStyle(
-              color: (isDark ? Colors.white : Colors.black).withOpacity(0.3),
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
+
+            // Floating Combo Texts
+            ..._floatingTexts.map((ft) => ft.build()),
+
+            // Overlays
+            if (!_gameStarted && !_gameOver && !_levelComplete)
+              _buildMenuOverlay(),
+            if (_gameOver) _buildGameOverOverlay(),
+            if (_levelComplete) _buildLevelCompleteOverlay(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Top bar ──────────────────────────────────────────────────
+  Widget _buildTopBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ShaderMask(
+            shaderCallback: (r) => const LinearGradient(
+              colors: [Color(0xFFFF4081), Color(0xFF7C4DFF)],
+            ).createShader(r),
+            child: const Text(
+              'MATCH 3',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 4,
+              ),
             ),
           ),
         ],
@@ -562,142 +328,250 @@ class _Match3WidgetState extends State<Match3Widget>
     );
   }
 
-  Widget _buildBackArrow(bool isDark) {
-    if (_gameStarted && !_isGameOver && !_isLevelComplete) {
-      return const SizedBox.shrink();
-    }
-
-    return Positioned(
-      top: 10,
-      left: 10,
-      child: SafeArea(
-        child: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_new,
-            color: isDark ? Colors.white : Colors.black87,
+  // ─── Header: score, moves, level ─────────────────────────────
+  Widget _buildHeader() {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, _) {
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.45),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white12, width: 1),
           ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopBar(bool isDark) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            IconButton(
-              icon: Icon(
-                Icons.refresh,
-                color: isDark ? Colors.white38 : Colors.black26,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _statChip('SCORE', '${_ctrl.score}', Match3Theme.primaryPink),
+              _vertDivider(),
+              _statChip('LEVEL', '$_level', const Color(0xFF69F0AE)),
+              _vertDivider(),
+              _statChip(
+                'MOVES',
+                '${_ctrl.moves}',
+                _ctrl.moves <= 5 ? Colors.redAccent : Match3Theme.juicyOrange,
               ),
-              onPressed: _resetGame,
-            ),
-          ],
-        ),
-      ),
+              _vertDivider(),
+              _statChip('TARGET', '$_targetScore', Match3Theme.oceanBlue),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: (isDark ? Colors.white10 : Colors.black12)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _infoCard("SCORE", "$_score", Colors.pinkAccent, isDark),
-            _infoCard("MOVES", "$_moves", Colors.orangeAccent, isDark),
-            _infoCard("TARGET", "$_targetScore", Colors.blueAccent, isDark),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _infoCard(String label, String value, Color color, bool isDark) {
+  Widget _statChip(String label, String value, Color color) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label,
           style: TextStyle(
-            color: (isDark ? Colors.white : Colors.black).withOpacity(0.4),
-            fontSize: 10,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.5,
+            color: Colors.white.withOpacity(0.4),
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.2,
           ),
         ),
-        const SizedBox(height: 5),
+        const SizedBox(height: 4),
         Text(
           value,
           style: TextStyle(
             color: color,
             fontSize: 22,
             fontWeight: FontWeight.w900,
-            shadows: [
-              Shadow(
-                color: color.withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            shadows: [Shadow(color: color.withOpacity(0.5), blurRadius: 12)],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildGridInteraction(bool isDark) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final double tileSize = (constraints.maxWidth - 40 - 24) / cols;
-        return Container(
-          margin: const EdgeInsets.all(20),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: (isDark ? Colors.white10 : Colors.black12),
-              width: 2,
+  Widget _vertDivider() =>
+      Container(width: 1, height: 36, color: Colors.white.withOpacity(0.08));
+
+  // ─── Score progress bar ───────────────────────────────────────
+  Widget _buildScoreBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Progress',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.5),
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              AnimatedBuilder(
+                animation: _ctrl,
+                builder: (context, _) => Text(
+                  '${((_ctrl.score / _targetScore) * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          Container(
+            height: 8,
+            decoration: BoxDecoration(
+              color: Colors.white12,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: AnimatedBuilder(
+              animation: _scoreBarAnim,
+              builder: (context, _) => Align(
+                alignment: Alignment.centerLeft,
+                child: FractionallySizedBox(
+                  widthFactor: _scoreBarAnim.value,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xFFFF4081),
+                          Color(0xFFE040FB),
+                          Color(0xFF7C4DFF),
+                        ],
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0xFFFF4081),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
-          child: GestureDetector(
-            onPanStart: (details) => _onPanStart(details, tileSize),
-            onPanUpdate: (details) => _onPanUpdate(details, tileSize),
-            child: GridView.builder(
-              padding: EdgeInsets.zero,
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: cols,
-                childAspectRatio: 1,
-              ),
-              itemCount: rows * cols,
-              itemBuilder: (context, index) {
-                int r = index ~/ cols;
-                int c = index % cols;
-                int type = _grid[r][c];
+        ],
+      ),
+    );
+  }
 
-                return AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  transitionBuilder: (child, animation) =>
-                      ScaleTransition(scale: animation, child: child),
-                  child: type == -1
-                      ? const SizedBox.shrink()
-                      : _buildGem(type, false, tileSize),
-                );
-              },
+  // ─── Game grid ────────────────────────────────────────────────
+  Widget _buildGrid() {
+    const double gridPadding = 6.0; // inner padding of the container
+    const double margin = 16.0; // horizontal margin on each side
+
+    return LayoutBuilder(
+      builder: (ctx, constraints) {
+        // Grid must be square. Use the smaller of width and available height.
+        final double availW = constraints.maxWidth - margin * 2;
+        final double availH = constraints.maxHeight;
+        final double outerSide = math.min(availW, availH);
+
+        // Inner content area (where tiles actually live)
+        final double innerSide = outerSide - gridPadding * 2;
+        final double tileSize = innerSide / 8;
+
+        return Center(
+          child: AnimatedBuilder(
+            animation: _ctrl,
+            builder: (context, _) => Container(
+              width: outerSide,
+              height: outerSide,
+              padding: const EdgeInsets.all(gridPadding),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.35),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white10, width: 1.5),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black54,
+                    blurRadius: 20,
+                    offset: Offset(0, 8),
+                  ),
+                ],
+              ),
+              // ClipRRect ensures tiles never render outside the box
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onPanDown: (d) {
+                    if (_ctrl.isProcessing || !_gameStarted) return;
+                    final c = (d.localPosition.dx / tileSize).floor().clamp(
+                      0,
+                      7,
+                    );
+                    final r = (d.localPosition.dy / tileSize).floor().clamp(
+                      0,
+                      7,
+                    );
+                    setState(() {
+                      _dragRow = r;
+                      _dragCol = c;
+                    });
+                  },
+                  onPanUpdate: (d) {
+                    if (_dragRow == null || _ctrl.isProcessing) return;
+                    final double originX = _dragCol! * tileSize + tileSize / 2;
+                    final double originY = _dragRow! * tileSize + tileSize / 2;
+                    final double dx = d.localPosition.dx - originX;
+                    final double dy = d.localPosition.dy - originY;
+                    final double thresh = tileSize * 0.42;
+                    int tr = _dragRow!, tc = _dragCol!;
+                    if (dx.abs() > dy.abs()) {
+                      if (dx.abs() > thresh) tc += (dx > 0 ? 1 : -1);
+                    } else {
+                      if (dy.abs() > thresh) tr += (dy > 0 ? 1 : -1);
+                    }
+                    if ((tr != _dragRow || tc != _dragCol) &&
+                        tr >= 0 &&
+                        tr < 8 &&
+                        tc >= 0 &&
+                        tc < 8) {
+                      final r1 = _dragRow!, c1 = _dragCol!;
+                      setState(() {
+                        _dragRow = null;
+                        _dragCol = null;
+                      });
+                      _doSwap(r1, c1, tr, tc);
+                    }
+                  },
+                  onPanCancel: () => setState(() {
+                    _dragRow = null;
+                    _dragCol = null;
+                  }),
+                  // SizedBox ensures the Stack is EXACTLY the inner content size
+                  child: SizedBox(
+                    width: innerSide,
+                    height: innerSide,
+                    child: Stack(
+                      clipBehavior: Clip.hardEdge,
+                      children: [
+                        for (int r = 0; r < 8; r++)
+                          for (int c = 0; c < 8; c++)
+                            AnimatedPositioned(
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutCubic,
+                              left: c * tileSize,
+                              top: r * tileSize,
+                              width: tileSize,
+                              height: tileSize,
+                              child: _buildTileAt(r, c, tileSize),
+                            ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         );
@@ -705,230 +579,665 @@ class _Match3WidgetState extends State<Match3Widget>
     );
   }
 
-  Widget _buildGem(int type, bool isSelected, double tileSize) {
-    final colors = _gemGradients[type];
-    return Container(
-      key: ValueKey('gem_$type'),
-      margin: const EdgeInsets.all(4),
-      child: Stack(
+  Widget _buildTileAt(int r, int c, double tileSize) {
+    final tile = _ctrl.grid[r][c];
+    final isHint =
+        _hintMove != null &&
+        ((r == _hintMove!.r1 && c == _hintMove!.c1) ||
+            (r == _hintMove!.r2 && c == _hintMove!.c2));
+
+    if (tile.type == TileType.empty) {
+      return SizedBox(width: tileSize, height: tileSize);
+    }
+
+    return AnimatedBuilder(
+      animation: _pulseCtrl,
+      builder: (context, child) {
+        final scale = isHint ? (1.0 + _pulseCtrl.value * 0.12) : 1.0;
+        return Transform.scale(
+          scale: scale,
+          child: TileWidget(tile: tile, size: tileSize),
+        );
+      },
+    );
+  }
+
+  // ─── Booster bar ──────────────────────────────────────────────
+  Widget _buildBoosterBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          // Main Body with 3D shadow
+          _boosterBtn(
+            Icons.auto_awesome_rounded,
+            'SHUFFLE',
+            const Color(0xFFFF4081),
+            () {
+              _ctrl.debugShuffle();
+              _haptic?.heavy();
+            },
+          ),
+          _boosterBtn(
+            Icons.tune_rounded,
+            'HINT',
+            const Color(0xFF69F0AE),
+            _showHint,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _boosterBtn(
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
           Container(
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: colors,
-              ),
-              borderRadius: BorderRadius.circular(tileSize * 0.3),
+              shape: BoxShape.circle,
+              color: color.withOpacity(0.15),
+              border: Border.all(color: color.withOpacity(0.4), width: 1.5),
               boxShadow: [
-                BoxShadow(
-                  color: colors[1].withOpacity(0.6),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
+                BoxShadow(color: color.withOpacity(0.3), blurRadius: 12),
               ],
             ),
+            child: Icon(icon, color: color, size: 22),
           ),
-          // Top Gloss / Specular Highlight
-          Positioned(
-            top: 2,
-            left: 2,
-            right: 2,
-            child: Container(
-              height: tileSize * 0.3,
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color.withOpacity(0.7),
+              fontSize: 9,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Menu overlay ─────────────────────────────────────────────
+  Widget _buildMenuOverlay() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xEF0D0D1A), Color(0xFF080810)],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Icon
+            Container(
+              padding: const EdgeInsets.all(28),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(tileSize * 0.3),
+                shape: BoxShape.circle,
+                gradient: const RadialGradient(
+                  colors: [Color(0x44FF4081), Colors.transparent],
                 ),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.white.withOpacity(0.6),
-                    Colors.white.withOpacity(0.0),
+                border: Border.all(color: const Color(0x55FF4081), width: 2),
+              ),
+              child: const Icon(
+                Icons.grid_view_rounded,
+                size: 70,
+                color: Color(0xFFFF4081),
+              ),
+            ),
+            const SizedBox(height: 28),
+            // Title
+            ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [Color(0xFFFF4081), Color(0xFF7C4DFF)],
+              ).createShader(bounds),
+              child: const Text(
+                'MATCH 3',
+                style: TextStyle(
+                  fontSize: 52,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 8,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'MATCH 3 GEMS TO SCORE',
+              style: TextStyle(
+                color: Colors.white38,
+                fontSize: 13,
+                letterSpacing: 3,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 60),
+            // Play button
+            _PremiumButton(
+              label: '▶  PLAY NOW',
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFF4081), Color(0xFF7C4DFF)],
+              ),
+              onTap: _startGame,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'TARGET  •  $_targetScore POINTS  •  30 MOVES',
+              style: const TextStyle(
+                color: Colors.white24,
+                fontSize: 11,
+                letterSpacing: 1.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Game Over overlay ────────────────────────────────────────
+  Widget _buildGameOverOverlay() {
+    return _FullOverlay(
+      emoji: '💔',
+      title: 'GAME OVER',
+      titleGradient: const [Color(0xFFFF1744), Color(0xFFFF4081)],
+      subtitle: 'You ran out of moves!',
+      score: _ctrl.score,
+      level: _level,
+      primaryLabel: '🔁  TRY AGAIN',
+      primaryGradient: const LinearGradient(
+        colors: [Color(0xFFFF1744), Color(0xFFFF4081)],
+      ),
+      onPrimary: _resetGame,
+      secondaryLabel: '🏠  HOME',
+      onSecondary: () => Navigator.of(context).pop(),
+    );
+  }
+
+  // ─── Level Complete overlay ───────────────────────────────────
+  Widget _buildLevelCompleteOverlay() {
+    final stars = _ctrl.score >= _targetScore * 1.5
+        ? 3
+        : (_ctrl.score >= _targetScore * 1.2 ? 2 : 1);
+
+    return _FullOverlay(
+      emoji: '🎉',
+      title: 'LEVEL $_level\nCOMPLETE!',
+      titleGradient: const [Color(0xFFFFD700), Color(0xFFFF8800)],
+      subtitle: '⭐' * stars,
+      score: _ctrl.score,
+      level: _level,
+      primaryLabel: '➡  NEXT LEVEL',
+      primaryGradient: const LinearGradient(
+        colors: [Color(0xFFFFD700), Color(0xFFFF8800)],
+      ),
+      onPrimary: _nextLevel,
+      secondaryLabel: '🏠  HOME',
+      onSecondary: () => Navigator.of(context).pop(),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Animated background
+// ═══════════════════════════════════════════════════════════════
+class _AnimatedBg extends StatelessWidget {
+  final AnimationController controller;
+  const _AnimatedBg({required this.controller});
+
+  static const List<_BgBlob> _blobs = [
+    _BgBlob(x: 0.1, y: 0.1, color: Color(0x22FF4081), size: 340),
+    _BgBlob(x: 0.8, y: 0.25, color: Color(0x1A7C4DFF), size: 280),
+    _BgBlob(x: 0.2, y: 0.7, color: Color(0x1840C4FF), size: 260),
+    _BgBlob(x: 0.75, y: 0.75, color: Color(0x22E040FB), size: 300),
+    _BgBlob(x: 0.5, y: 0.5, color: Color(0x111A1A2E), size: 500),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (ctx, _) {
+        final t = controller.value;
+        return Stack(
+          children: [
+            Container(color: const Color(0xFF0D0D1A)),
+            ..._blobs.map((b) {
+              final dx = math.sin(t * math.pi * 2 + b.x * 10) * 30;
+              final dy = math.cos(t * math.pi * 2 + b.y * 10) * 25;
+              return Positioned(
+                left: (MediaQuery.of(ctx).size.width * b.x) + dx - b.size / 2,
+                top: (MediaQuery.of(ctx).size.height * b.y) + dy - b.size / 2,
+                child: Container(
+                  width: b.size,
+                  height: b.size,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [b.color, Colors.transparent],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _BgBlob {
+  final double x, y, size;
+  final Color color;
+  const _BgBlob({
+    required this.x,
+    required this.y,
+    required this.color,
+    required this.size,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Floating combo text
+// ═══════════════════════════════════════════════════════════════
+class _FloatingText {
+  final String text;
+  final Color color;
+  final Key key;
+
+  const _FloatingText({
+    required this.text,
+    required this.color,
+    required this.key,
+  });
+
+  Widget build() {
+    return _FloatingTextWidget(key: key, text: text, color: color);
+  }
+}
+
+class _FloatingTextWidget extends StatefulWidget {
+  final String text;
+  final Color color;
+  const _FloatingTextWidget({
+    super.key,
+    required this.text,
+    required this.color,
+  });
+
+  @override
+  State<_FloatingTextWidget> createState() => _FloatingTextWidgetState();
+}
+
+class _FloatingTextWidgetState extends State<_FloatingTextWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _c;
+  late Animation<double> _scale, _opacity, _y;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..forward();
+    _scale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(
+          begin: 0.3,
+          end: 1.4,
+        ).chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 45,
+      ),
+      TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.0), weight: 55),
+    ]).animate(_c);
+    _opacity = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(parent: _c, curve: const Interval(0.65, 1.0)));
+    _y = Tween<double>(
+      begin: 0,
+      end: -70,
+    ).animate(CurvedAnimation(parent: _c, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (_, __) => Transform.translate(
+          offset: Offset(0, _y.value),
+          child: FadeTransition(
+            opacity: _opacity,
+            child: ScaleTransition(
+              scale: _scale,
+              child: Text(
+                widget.text,
+                style: TextStyle(
+                  fontSize: 46,
+                  fontWeight: FontWeight.w900,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                      color: widget.color,
+                      blurRadius: 22,
+                      offset: Offset.zero,
+                    ),
+                    Shadow(
+                      color: widget.color.withOpacity(0.5),
+                      blurRadius: 40,
+                    ),
                   ],
                 ),
               ),
             ),
           ),
-          // Inner Shine
-          Center(
-            child: Icon(
-              _tileIcons[type],
-              color: Colors.white.withOpacity(0.95),
-              size: tileSize * 0.55,
-              shadows: [
-                Shadow(
-                  color: Colors.black26,
-                  blurRadius: 4,
-                  offset: const Offset(1, 1),
-                ),
-              ],
-            ),
-          ),
-          // Bottom Highlight for depth
-          Positioned(
-            bottom: 4,
-            left: 6,
-            right: 6,
-            child: Container(
-              height: 4,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.white.withOpacity(0.2),
-                    blurRadius: 4,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFooter(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 50),
-      child: Column(
-        children: [
-          if (_comboMultiplier > 1.0)
-            Text(
-              "COMBO x${_comboMultiplier.toStringAsFixed(1)}",
-              style: const TextStyle(
-                color: Colors.pinkAccent,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          const SizedBox(height: 10),
-          Text(
-            "LEVEL $_level",
-            style: TextStyle(
-              color: isDark ? Colors.white12 : Colors.black12,
-              fontSize: 32,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 8,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGameOverOverlay(bool isDark) {
-    return Container(
-      width: double.infinity,
-      color: (isDark ? Colors.black : Colors.white).withOpacity(0.95),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.sentiment_very_dissatisfied_rounded,
-            size: 80,
-            color: Colors.redAccent,
-          ),
-          const SizedBox(height: 20),
-          Text(
-            "GAME OVER",
-            style: TextStyle(
-              color: Colors.redAccent,
-              fontSize: 44,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            "SCORE: $_score",
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black87,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 60),
-          _overlayButton(
-            "TRY AGAIN",
-            _resetGame,
-            isDark ? Colors.white : Colors.black,
-            isDark ? Colors.black : Colors.white,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLevelCompleteOverlay(bool isDark) {
-    return Container(
-      width: double.infinity,
-      color: (isDark ? Colors.black : Colors.white).withOpacity(0.95),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.stars_rounded, size: 100, color: Colors.amber),
-          const SizedBox(height: 20),
-          const Text(
-            "AMAZING!",
-            style: TextStyle(
-              color: Colors.greenAccent,
-              fontSize: 48,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 4,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            "LEVEL $_level CLEAR",
-            style: TextStyle(
-              color: isDark ? Colors.white70 : Colors.black54,
-              fontSize: 20,
-            ),
-          ),
-          const SizedBox(height: 60),
-          _overlayButton(
-            "NEXT LEVEL",
-            _nextLevel,
-            Colors.greenAccent,
-            Colors.black,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _overlayButton(
-    String label,
-    VoidCallback onTap,
-    Color bgColor,
-    Color textColor,
-  ) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: bgColor,
-        foregroundColor: textColor,
-        padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 22),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
-        elevation: 10,
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontWeight: FontWeight.w900,
-          fontSize: 22,
-          letterSpacing: 1.5,
         ),
       ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Premium Button
+// ═══════════════════════════════════════════════════════════════
+class _PremiumButton extends StatefulWidget {
+  final String label;
+  final LinearGradient gradient;
+  final VoidCallback onTap;
+  const _PremiumButton({
+    required this.label,
+    required this.gradient,
+    required this.onTap,
+  });
+
+  @override
+  State<_PremiumButton> createState() => _PremiumButtonState();
+}
+
+class _PremiumButtonState extends State<_PremiumButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _c;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 1.04,
+    ).animate(CurvedAnimation(parent: _c, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 20),
+          decoration: BoxDecoration(
+            gradient: widget.gradient,
+            borderRadius: BorderRadius.circular(40),
+            boxShadow: [
+              BoxShadow(
+                color: widget.gradient.colors.first.withOpacity(0.45),
+                blurRadius: 28,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Text(
+            widget.label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Full screen overlay (Game Over / Level Complete)
+// ═══════════════════════════════════════════════════════════════
+class _FullOverlay extends StatefulWidget {
+  final String emoji, title, subtitle;
+  final List<Color> titleGradient;
+  final int score, level;
+  final String primaryLabel, secondaryLabel;
+  final LinearGradient primaryGradient;
+  final VoidCallback onPrimary, onSecondary;
+
+  const _FullOverlay({
+    required this.emoji,
+    required this.title,
+    required this.titleGradient,
+    required this.subtitle,
+    required this.score,
+    required this.level,
+    required this.primaryLabel,
+    required this.primaryGradient,
+    required this.onPrimary,
+    required this.secondaryLabel,
+    required this.onSecondary,
+  });
+
+  @override
+  State<_FullOverlay> createState() => _FullOverlayState();
+}
+
+class _FullOverlayState extends State<_FullOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _c;
+  late Animation<double> _scale, _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..forward();
+    _scale = Tween<double>(
+      begin: 0.85,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _c, curve: Curves.easeOutBack));
+    _fade = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _c, curve: Curves.easeIn));
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, child) => FadeTransition(
+        opacity: _fade,
+        child: Container(
+          color: Colors.black.withOpacity(0.88),
+          child: Center(
+            child: ScaleTransition(
+              scale: _scale,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 28),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 36,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1A2E),
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(
+                    color: widget.titleGradient.first.withOpacity(0.35),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.titleGradient.first.withOpacity(0.2),
+                      blurRadius: 40,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(widget.emoji, style: const TextStyle(fontSize: 52)),
+                    const SizedBox(height: 16),
+                    ShaderMask(
+                      shaderCallback: (r) => LinearGradient(
+                        colors: widget.titleGradient,
+                      ).createShader(r),
+                      child: Text(
+                        widget.title,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 34,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          height: 1.1,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      widget.subtitle,
+                      style: const TextStyle(fontSize: 22, letterSpacing: 2),
+                    ),
+                    const SizedBox(height: 24),
+                    // Stats row
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _statItem(
+                            'SCORE',
+                            '${widget.score}',
+                            const Color(0xFFFF4081),
+                          ),
+                          _statItem(
+                            'LEVEL',
+                            '${widget.level}',
+                            const Color(0xFF69F0AE),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    _PremiumButton(
+                      label: widget.primaryLabel,
+                      gradient: widget.primaryGradient,
+                      onTap: widget.onPrimary,
+                    ),
+                    const SizedBox(height: 14),
+                    GestureDetector(
+                      onTap: widget.onSecondary,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 50,
+                          vertical: 15,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.07),
+                          borderRadius: BorderRadius.circular(40),
+                          border: Border.all(color: Colors.white24, width: 1),
+                        ),
+                        child: Text(
+                          widget.secondaryLabel,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statItem(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.4),
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 26,
+            fontWeight: FontWeight.w900,
+            shadows: [Shadow(color: color, blurRadius: 12)],
+          ),
+        ),
+      ],
     );
   }
 }
