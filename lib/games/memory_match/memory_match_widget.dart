@@ -1,9 +1,11 @@
-import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/models/game_model.dart';
-import '../../core/services/haptic_service.dart';
-import '../../ui/widgets/game_countdown.dart';
+import 'providers/memory_game_provider.dart';
+import 'widgets/game_board.dart';
+import 'widgets/game_lobby.dart';
+import 'widgets/player_hud.dart';
+import 'widgets/game_over_dialog.dart';
 
 class MemoryMatchWidget extends StatefulWidget {
   final GameModel game;
@@ -14,349 +16,236 @@ class MemoryMatchWidget extends StatefulWidget {
   State<MemoryMatchWidget> createState() => _MemoryMatchWidgetState();
 }
 
-class _CardItem {
-  final int id;
-  final IconData icon;
-  final Color color;
-  bool isFlipped;
-  bool isMatched;
-
-  _CardItem({
-    required this.id,
-    required this.icon,
-    required this.color,
-    this.isFlipped = false,
-    this.isMatched = false,
-  });
-}
-
-class _MemoryMatchWidgetState extends State<MemoryMatchWidget> {
-  static const int gridSize = 4; // 4x4 grid
-
-  List<_CardItem> cards = [];
-  List<int> flippedIndices = [];
-
-  bool isPlaying = false;
-  bool isProcessing = false;
-  bool _showCountdown = false;
-  int matchesFound = 0;
-  int moves = 0;
-
-  HapticService? _hapticService;
-
-  final List<IconData> _icons = [
-    Icons.star,
-    Icons.favorite,
-    Icons.light_mode,
-    Icons.dark_mode,
-    Icons.pets,
-    Icons.rocket_launch,
-    Icons.music_note,
-    Icons.diamond,
-  ];
-
-  final List<Color> _colors = [
-    Colors.redAccent,
-    Colors.pinkAccent,
-    Colors.orangeAccent,
-    Colors.purpleAccent,
-    Colors.brown,
-    Colors.blueAccent,
-    Colors.teal,
-    Colors.cyan,
-  ];
-
-  bool isPlayer1Turn = true;
-  int player1Score = 0;
-  int player2Score = 0;
+class _MemoryMatchWidgetState extends State<MemoryMatchWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _bgController;
 
   @override
   void initState() {
     super.initState();
-    _initializeServices();
+    _bgController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat(reverse: true);
   }
 
-  Future<void> _initializeServices() async {
-    _hapticService = await HapticService.getInstance();
-  }
-
-  void _startGame() {
-    setState(() {
-      isPlaying = true;
-      _showCountdown = true;
-      player1Score = 0;
-      player2Score = 0;
-      isPlayer1Turn = true;
-      matchesFound = 0;
-      moves = 0;
-      isProcessing = false;
-      flippedIndices = [];
-
-      // Create pairs
-      List<_CardItem> tempCards = [];
-      for (int i = 0; i < 8; i++) {
-        tempCards.add(_CardItem(id: i, icon: _icons[i], color: _colors[i]));
-        tempCards.add(_CardItem(id: i, icon: _icons[i], color: _colors[i]));
-      }
-      tempCards.shuffle(Random());
-      cards = tempCards;
-    });
-  }
-
-  void _onCardTap(int index) {
-    if (!isPlaying ||
-        _showCountdown ||
-        isProcessing ||
-        cards[index].isFlipped ||
-        cards[index].isMatched)
-      return;
-
-    setState(() {
-      cards[index].isFlipped = true;
-      flippedIndices.add(index);
-    });
-
-    _hapticService?.light();
-
-    if (flippedIndices.length == 2) {
-      _checkMatch();
-    }
-  }
-
-  void _checkMatch() {
-    setState(() {
-      isProcessing = true;
-      moves++;
-    });
-
-    final index1 = flippedIndices[0];
-    final index2 = flippedIndices[1];
-
-    if (cards[index1].id == cards[index2].id) {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (!mounted) return;
-        setState(() {
-          cards[index1].isMatched = true;
-          cards[index2].isMatched = true;
-          matchesFound++;
-          if (isPlayer1Turn)
-            player1Score++;
-          else
-            player2Score++;
-          flippedIndices.clear();
-          isProcessing = false;
-        });
-        _hapticService?.success();
-        if (matchesFound == 8) _gameOver();
-      });
-    } else {
-      Future.delayed(const Duration(milliseconds: 1000), () {
-        if (!mounted) return;
-        setState(() {
-          cards[index1].isFlipped = false;
-          cards[index2].isFlipped = false;
-          flippedIndices.clear();
-          isProcessing = false;
-          isPlayer1Turn = !isPlayer1Turn;
-        });
-        _hapticService?.error();
-      });
-    }
-  }
-
-  void _gameOver() {
-    setState(() => isPlaying = false);
-    // ... game over logic ...
+  @override
+  void dispose() {
+    _bgController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return ChangeNotifierProvider(
+      create: (_) => MemoryGameProvider(),
+      child: Consumer<MemoryGameProvider>(
+        builder: (context, provider, child) {
+          // Listen for game over to show dialog
+          if (provider.isGameOver) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _showGameOverDialog(context);
+            });
+          }
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              SafeArea(bottom: false, child: _buildHeader(isDark)),
+          return Scaffold(
+            body: Stack(
+              children: [
+                // Animated Gradient Background
+                _buildAnimatedBackground(),
 
-              if (isPlaying) ...[
-                // Scores
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                SafeArea(
+                  child: Column(
                     children: [
-                      _buildPlayerScore(
-                        'P1',
-                        player1Score,
-                        isPlayer1Turn,
-                        Colors.blue,
-                        isDark,
-                      ),
-                      _buildPlayerScore(
-                        'P2',
-                        player2Score,
-                        !isPlayer1Turn,
-                        Colors.red,
-                        isDark,
-                      ),
+                      _buildHeader(context, provider),
+
+                      if (provider.cards.isEmpty)
+                        const Expanded(child: GameLobby())
+                      else ...[
+                        const PlayerHUD(),
+                        if (provider.isSuddenDeath) _buildSuddenDeathBanner(),
+                        const Expanded(
+                          child: SingleChildScrollView(child: GameBoard()),
+                        ),
+                        _buildBottomActions(context, provider),
+                      ],
                     ],
                   ),
                 ),
-
-                // Grid
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: GridView.builder(
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: gridSize,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                            childAspectRatio: 0.85,
-                          ),
-                      itemCount: 16,
-                      itemBuilder: (context, index) =>
-                          _buildCard(index, isDark),
-                    ),
-                  ),
-                ),
-              ] else if (!isPlaying)
-                Expanded(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          widget.game.icon,
-                          size: 80,
-                          color: Colors.blueAccent,
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: _startGame,
-                          child: const Text('Start Game'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-
-          // Global Countdown Overlay
-          if (_showCountdown)
-            Container(
-              color: Colors.black26,
-              child: GameCountdown(
-                onFinished: () {
-                  if (mounted) {
-                    Future.delayed(const Duration(milliseconds: 800), () {
-                      if (mounted) setState(() => _showCountdown = false);
-                    });
-                  }
-                },
-              ),
+              ],
             ),
-        ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildHeader(bool isDark) {
-    final color = isDark ? Colors.white : Colors.black;
+  Widget _buildAnimatedBackground() {
+    return AnimatedBuilder(
+      animation: _bgController,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.lerp(
+                  const Color(0xFF0F2027),
+                  const Color(0xFF2C5364),
+                  _bgController.value,
+                )!,
+                Color.lerp(
+                  const Color(0xFF203A43),
+                  const Color(0xFF0F2027),
+                  _bgController.value,
+                )!,
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, MemoryGameProvider provider) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          if (!isPlaying || matchesFound == 8)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: color,
-                  size: 22,
-                ),
-              ),
-            ),
-          Text(
-            widget.game.title,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Center(
+        child: Text(
+          widget.game.title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildPlayerScore(
-    String name,
-    int score,
-    bool active,
-    Color color,
-    bool isDark,
+  Widget _buildBottomActions(
+    BuildContext context,
+    MemoryGameProvider provider,
   ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: BoxDecoration(
-        color: active ? color.withOpacity(0.1) : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: active ? color : Colors.transparent,
-          width: 2,
-        ),
-      ),
-      child: Column(
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          Text(
-            name,
-            style: TextStyle(
-              color: color,
-              fontWeight: active ? FontWeight.bold : FontWeight.normal,
-            ),
+          _ActionButton(
+            icon: Icons.lightbulb_outline_rounded,
+            label: "Reveal",
+            onTap: provider.usePowerUpReveal,
+            color: Colors.amberAccent,
           ),
-          Text(
-            '$score',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+          _ActionButton(
+            icon: Icons.auto_fix_high_rounded,
+            label: "Hint",
+            onTap: () {
+              provider.useHint();
+            },
+            color: Colors.cyanAccent,
+          ),
+          _ActionButton(
+            icon: Icons.refresh_rounded,
+            label: "Reset",
+            onTap: () => provider.startGame(provider.difficulty),
+            color: Colors.white70,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCard(int index, bool isDark) {
-    final card = cards[index];
-    return GestureDetector(
-      onTap: () => _onCardTap(index),
-      child: Container(
-        decoration: BoxDecoration(
-          color: card.isFlipped || card.isMatched
-              ? Colors.white
-              : Colors.grey[800],
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(
-          child: card.isFlipped || card.isMatched
-              ? Icon(card.icon, color: card.color, size: 30)
-              : const Icon(Icons.help_outline, color: Colors.white24, size: 30),
-        ),
+  Widget _buildSuddenDeathBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.redAccent.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.bolt_rounded, color: Colors.redAccent, size: 20),
+          const SizedBox(width: 8),
+          const Text(
+            "SUDDEN DEATH: 8s TURNS!",
+            style: TextStyle(
+              color: Colors.redAccent,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Icon(Icons.bolt_rounded, color: Colors.redAccent, size: 20),
+        ],
+      ),
+    );
+  }
+
+  void _showGameOverDialog(BuildContext context) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: "GameOver",
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (context, anim1, anim2) => const GameOverDialog(),
+      transitionBuilder: (context, anim1, anim2, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: anim1, curve: Curves.elasticOut),
+          child: FadeTransition(opacity: anim1, child: child),
+        );
+      },
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color color;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05),
+              shape: BoxShape.circle,
+              border: Border.all(color: color.withOpacity(0.3)),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
