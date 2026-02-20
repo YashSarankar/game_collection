@@ -44,6 +44,7 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
   int currentPlayerIndex = 0; // 0: Red, 1: Green, 2: Yellow, 3: Blue
   bool canRoll = true;
   List<int> movablePieceIndices = [];
+  final math.Random _random = math.Random();
   HapticService? _hapticService;
   SoundService? _soundService;
 
@@ -123,13 +124,13 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
 
     _hapticService?.light();
 
-    int finalRoll = math.Random().nextInt(6) + 1;
+    int finalRoll = _random.nextInt(6) + 1;
 
     for (int i = 0; i < 8; i++) {
       await Future.delayed(const Duration(milliseconds: 75));
       if (mounted) {
         setState(() {
-          diceValue = math.Random().nextInt(6) + 1;
+          diceValue = _random.nextInt(6) + 1;
         });
       }
     }
