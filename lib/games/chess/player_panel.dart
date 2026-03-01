@@ -190,43 +190,4 @@ class PlayerPanel extends StatelessWidget {
         return 0;
     }
   }
-
-  String _getPieceIcon(PieceType type) {
-    // If this is white's panel, show black pieces captured
-    final pieceColor = color == PlayerColor.white
-        ? PlayerColor.black
-        : PlayerColor.white;
-
-    if (pieceColor == PlayerColor.white) {
-      switch (type) {
-        case PieceType.pawn:
-          return '♙';
-        case PieceType.rook:
-          return '♖';
-        case PieceType.knight:
-          return '♘';
-        case PieceType.bishop:
-          return '♗';
-        case PieceType.queen:
-          return '♕';
-        case PieceType.king:
-          return '♔';
-      }
-    } else {
-      switch (type) {
-        case PieceType.pawn:
-          return '♟';
-        case PieceType.rook:
-          return '♜';
-        case PieceType.knight:
-          return '♞';
-        case PieceType.bishop:
-          return '♝';
-        case PieceType.queen:
-          return '♛';
-        case PieceType.king:
-          return '♚';
-      }
-    }
-  }
 }

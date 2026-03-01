@@ -55,10 +55,10 @@ class _CarromWidgetState extends State<CarromWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   GameState _gameState = GameState.setup;
-  int _playerCount = 2;
-  List<Player> _players = [];
+  final int _playerCount = 2;
+  final List<Player> _players = [];
   int _currentPlayerIndex = 0;
-  List<CarromPiece> _pieces = [];
+  final List<CarromPiece> _pieces = [];
   late CarromPiece _striker;
 
   bool _isAiming = false;
@@ -70,7 +70,6 @@ class _CarromWidgetState extends State<CarromWidget>
   // Game constants
   final double _boardSize = 800.0;
   final double _pocketRadius = 60.0; // Significant increase for easier fouls
-  final double _pieceRadius = 18.0;
   final double _queenRadius = 18.0;
   final double _strikerRadius = 25.0;
   final double _friction = 0.985;
@@ -116,89 +115,7 @@ class _CarromWidgetState extends State<CarromWidget>
     _hapticService = await HapticService.getInstance();
   }
 
-  void _startGame(int players) {
-    setState(() {
-      _playerCount = players;
-      _players = List.generate(
-        players,
-        (i) =>
-            Player(id: i, name: 'Player ${i + 1}', color: _getPlayerColor(i)),
-      );
-      _currentPlayerIndex = 0;
-      _gameState = GameState.playing;
-      _initBoard();
-    });
-    _controller.repeat();
-  }
-
-  Color _getPlayerColor(int index) {
-    switch (index) {
-      case 0:
-        return Colors.blue;
-      case 1:
-        return Colors.green;
-      case 2:
-        return Colors.orange;
-      case 3:
-        return Colors.purple;
-      default:
-        return Colors.blue;
-    }
-  }
-
-  void _initBoard() {
-    _pieces = [];
-    double centerX = _boardSize / 2;
-    double centerY = _boardSize / 2;
-
-    // Add Queen
-    _pieces.add(
-      CarromPiece(
-        position: Offset(centerX, centerY),
-        type: CarromPieceType.queen,
-        radius: _queenRadius,
-        mass: 1.0,
-      ),
-    );
-
-    // Inner Circle: 3 White, 3 Black (tight alignment)
-    double r1 = _pieceRadius * 2 + 0.2; // 2r distance for tight pack
-    for (int i = 0; i < 6; i++) {
-      double angle = i * pi / 3;
-      _pieces.add(
-        CarromPiece(
-          position: Offset(
-            centerX + r1 * cos(angle),
-            centerY + r1 * sin(angle),
-          ),
-          type: i % 2 == 0 ? CarromPieceType.white : CarromPieceType.black,
-          radius: _pieceRadius,
-          mass: 1.0,
-        ),
-      );
-    }
-
-    // Outer Circle: 6 White, 6 Black (tight alignment)
-    // Radius calculated so 12 pieces touch each other on a circle
-    double r2 = _pieceRadius * 3.864 + 0.4;
-    for (int i = 0; i < 12; i++) {
-      double angle = i * pi / 6 + (pi / 12);
-      _pieces.add(
-        CarromPiece(
-          position: Offset(
-            centerX + r2 * cos(angle),
-            centerY + r2 * sin(angle),
-          ),
-          type: i % 2 == 0 ? CarromPieceType.black : CarromPieceType.white,
-          radius: _pieceRadius,
-          mass: 1.0,
-        ),
-      );
-    }
-
-    _resetStriker();
-    _waitingForCover = false;
-  }
+  // Carrom game is currently in setup mode (coming soon)
 
   void _resetStriker() {
     double baselineOffset = 130.0;
@@ -489,10 +406,7 @@ class _CarromWidgetState extends State<CarromWidget>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: widget.game.primaryColor.withOpacity(0.2),
-              border: Border.all(
-                color: widget.game.primaryColor,
-                width: 3,
-              ),
+              border: Border.all(color: widget.game.primaryColor, width: 3),
             ),
             child: Icon(
               Icons.album_outlined,
@@ -570,7 +484,9 @@ class _CarromWidgetState extends State<CarromWidget>
                 height: 12,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: widget.game.primaryColor.withOpacity(0.3 + (index * 0.2)),
+                  color: widget.game.primaryColor.withOpacity(
+                    0.3 + (index * 0.2),
+                  ),
                 ),
               ),
             ),
@@ -623,7 +539,7 @@ class _CarromWidgetState extends State<CarromWidget>
                               size: Size.infinite,
                             ),
                             LayoutBuilder(
-                              builder: (context, constraints) {
+                              builder: (_, constraints) {
                                 double scale =
                                     constraints.maxWidth / _boardSize;
                                 return GestureDetector(

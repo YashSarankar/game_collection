@@ -194,10 +194,11 @@ class _WordBattleWidgetState extends State<WordBattleWidget>
         int wordScore = result['score'];
         setState(() {
           if (_isPvP) {
-            if (_currentPlayer == 1)
+            if (_currentPlayer == 1) {
               _p1Score += wordScore;
-            else
+            } else {
               _p2Score += wordScore;
+            }
           } else {
             _p1Score += wordScore;
           }
@@ -791,12 +792,13 @@ class _WordBattleWidgetState extends State<WordBattleWidget>
   Widget _buildGameOver() {
     String winnerText = "";
     if (_isPvP) {
-      if (_p1Score > _p2Score)
+      if (_p1Score > _p2Score) {
         winnerText = "PLAYER 1 WINS!";
-      else if (_p2Score > _p1Score)
+      } else if (_p2Score > _p1Score) {
         winnerText = "PLAYER 2 WINS!";
-      else
+      } else {
         winnerText = "IT'S A DRAW!";
+      }
     } else {
       winnerText = "SCORE: $_p1Score";
     }

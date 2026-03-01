@@ -232,13 +232,15 @@ class AsteroidsLogic extends ChangeNotifier {
       asteroid.rotation += asteroid.rotationSpeed * dt;
 
       // Horizontal wrap
-      if (asteroid.position.dx < -100)
+      if (asteroid.position.dx < -100) {
         asteroid.position = Offset(
           screenSize.width + 100,
           asteroid.position.dy,
         );
-      if (asteroid.position.dx > screenSize.width + 100)
+      }
+      if (asteroid.position.dx > screenSize.width + 100) {
         asteroid.position = Offset(-100, asteroid.position.dy);
+      }
 
       // Remove if off bottom OR top (prevents leaking out of play area)
       if (asteroid.position.dy > screenSize.height + 150) {

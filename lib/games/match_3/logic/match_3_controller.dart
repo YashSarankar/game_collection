@@ -78,14 +78,16 @@ class Match3Controller extends ChangeNotifier {
     // Vertical: rows row-1 and row-2 are already in g
     if (row >= 2 &&
         g[row - 1][col].type == type &&
-        g[row - 2][col].type == type)
+        g[row - 2][col].type == type) {
       return true;
+    }
     // Horizontal: use the partial row being built, not g[row] (which doesn't exist yet)
     if (col >= 2 &&
         partial.length >= 2 &&
         partial[col - 1].type == type &&
-        partial[col - 2].type == type)
+        partial[col - 2].type == type) {
       return true;
+    }
     return false;
   }
 
@@ -133,13 +135,21 @@ class Match3Controller extends ChangeNotifier {
     if (type == TileType.empty) return false;
 
     int h = 1;
-    for (int i = c - 1; i >= 0 && grid[r][i].type == type; i--) h++;
-    for (int i = c + 1; i < cols && grid[r][i].type == type; i++) h++;
+    for (int i = c - 1; i >= 0 && grid[r][i].type == type; i--) {
+      h++;
+    }
+    for (int i = c + 1; i < cols && grid[r][i].type == type; i++) {
+      h++;
+    }
     if (h >= 3) return true;
 
     int v = 1;
-    for (int i = r - 1; i >= 0 && grid[i][c].type == type; i--) v++;
-    for (int i = r + 1; i < rows && grid[i][c].type == type; i++) v++;
+    for (int i = r - 1; i >= 0 && grid[i][c].type == type; i--) {
+      v++;
+    }
+    for (int i = r + 1; i < rows && grid[i][c].type == type; i++) {
+      v++;
+    }
     return v >= 3;
   }
 
@@ -217,31 +227,44 @@ class Match3Controller extends ChangeNotifier {
 
           // Horizontal run starting at (r,c)
           int hEnd = c;
-          while (hEnd < cols && grid[r][hEnd].type == type) hEnd++;
+          while (hEnd < cols && grid[r][hEnd].type == type) {
+            hEnd++;
+          }
           final hLen = hEnd - c;
           if (hLen >= 3) {
-            for (int i = c; i < hEnd; i++) toClear[r][i] = true;
-            if (hLen == 4)
+            for (int i = c; i < hEnd; i++) {
+              toClear[r][i] = true;
+            }
+            if (hLen == 4) {
               _createSpecial(r, c + hLen ~/ 2, type, SpecialType.lineHor);
-            if (hLen >= 5)
+            }
+            if (hLen >= 5) {
               _createSpecial(r, c + hLen ~/ 2, type, SpecialType.colorBomb);
+            }
           }
 
           // Vertical run starting at (r,c)
           int vEnd = r;
-          while (vEnd < rows && grid[vEnd][c].type == type) vEnd++;
+          while (vEnd < rows && grid[vEnd][c].type == type) {
+            vEnd++;
+          }
           final vLen = vEnd - r;
           if (vLen >= 3) {
-            for (int i = r; i < vEnd; i++) toClear[i][c] = true;
-            if (vLen == 4)
+            for (int i = r; i < vEnd; i++) {
+              toClear[i][c] = true;
+            }
+            if (vLen == 4) {
               _createSpecial(r + vLen ~/ 2, c, type, SpecialType.lineVer);
-            if (vLen >= 5)
+            }
+            if (vLen >= 5) {
               _createSpecial(r + vLen ~/ 2, c, type, SpecialType.colorBomb);
+            }
           }
 
           // L/T shape → bomb
-          if (hLen >= 3 && vLen >= 3)
+          if (hLen >= 3 && vLen >= 3) {
             _createSpecial(r, c, type, SpecialType.bomb);
+          }
         }
       }
 
@@ -340,14 +363,22 @@ class Match3Controller extends ChangeNotifier {
         }
         break;
       case SpecialType.cross:
-        for (int i = 0; i < cols; i++) toClear[r][i] = true;
-        for (int i = 0; i < rows; i++) toClear[i][c] = true;
+        for (int i = 0; i < cols; i++) {
+          toClear[r][i] = true;
+        }
+        for (int i = 0; i < rows; i++) {
+          toClear[i][c] = true;
+        }
         break;
       case SpecialType.lineHor:
-        for (int i = 0; i < cols; i++) toClear[r][i] = true;
+        for (int i = 0; i < cols; i++) {
+          toClear[r][i] = true;
+        }
         break;
       case SpecialType.lineVer:
-        for (int i = 0; i < rows; i++) toClear[i][c] = true;
+        for (int i = 0; i < rows; i++) {
+          toClear[i][c] = true;
+        }
         break;
       case SpecialType.colorBomb:
         for (int i = 0; i < rows; i++) {

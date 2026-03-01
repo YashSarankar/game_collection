@@ -206,12 +206,13 @@ class _TapDuelWidgetState extends State<TapDuelWidget>
       if (_mode == TapDuelMode.pushBattle) {
         winner = _pushPosition > 0.5 ? 1 : 2;
       } else {
-        if (_player1Score > _player2Score)
+        if (_player1Score > _player2Score) {
           winner = 1;
-        else if (_player2Score > _player1Score)
+        } else if (_player2Score > _player1Score) {
           winner = 2;
-        else
+        } else {
           winner = 0; // Draw
+        }
       }
     }
 
@@ -219,12 +220,13 @@ class _TapDuelWidgetState extends State<TapDuelWidget>
       setState(() {
         _isGameOver = true;
         _gameStarted = false;
-        if (winner == 1)
+        if (winner == 1) {
           _winner = "PLAYER 1 WINS!";
-        else if (winner == 2)
+        } else if (winner == 2) {
           _winner = _vsAI ? "AI WINS!" : "PLAYER 2 WINS!";
-        else
+        } else {
           _winner = "IT'S A DRAW!";
+        }
       });
     }
 

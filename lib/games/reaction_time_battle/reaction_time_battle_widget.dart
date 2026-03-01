@@ -129,8 +129,9 @@ class _ReactionTimeBattleWidgetState extends State<ReactionTimeBattleWidget>
   void _handleTap(int player) {
     if (_state == GameState.idle ||
         _state == GameState.result ||
-        _state == GameState.gameOver)
+        _state == GameState.gameOver) {
       return;
+    }
 
     if (_state == GameState.waiting) {
       // Too early

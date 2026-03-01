@@ -211,41 +211,54 @@ class _TTTGameScreenState extends State<TTTGameScreen> {
 
     // Check row
     bool rowWin = true;
-    for (int i = 0; i < size; i++) if (board[row][i] != player) rowWin = false;
-    if (rowWin)
+    for (int i = 0; i < size; i++) {
+      if (board[row][i] != player) rowWin = false;
+    }
+    if (rowWin) {
       return List.generate(size, (i) => Offset(i.toDouble(), row.toDouble()));
+    }
 
     // Check col
     bool colWin = true;
-    for (int i = 0; i < size; i++) if (board[i][col] != player) colWin = false;
-    if (colWin)
+    for (int i = 0; i < size; i++) {
+      if (board[i][col] != player) colWin = false;
+    }
+    if (colWin) {
       return List.generate(size, (i) => Offset(col.toDouble(), i.toDouble()));
+    }
 
     // Check main diagonal
     if (row == col) {
       bool diagWin = true;
-      for (int i = 0; i < size; i++) if (board[i][i] != player) diagWin = false;
-      if (diagWin)
+      for (int i = 0; i < size; i++) {
+        if (board[i][i] != player) diagWin = false;
+      }
+      if (diagWin) {
         return List.generate(size, (i) => Offset(i.toDouble(), i.toDouble()));
+      }
     }
 
     // Check anti diagonal
     if (row + col == size - 1) {
       bool antiDiagWin = true;
-      for (int i = 0; i < size; i++)
+      for (int i = 0; i < size; i++) {
         if (board[i][size - 1 - i] != player) antiDiagWin = false;
-      if (antiDiagWin)
+      }
+      if (antiDiagWin) {
         return List.generate(
           size,
           (i) => Offset((size - 1 - i).toDouble(), i.toDouble()),
         );
+      }
     }
 
     return null;
   }
 
   bool _isBoardFull(List<List<String>> board) {
-    for (var row in board) if (row.contains('')) return false;
+    for (var row in board) {
+      if (row.contains('')) return false;
+    }
     return true;
   }
 

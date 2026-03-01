@@ -223,10 +223,11 @@ class LudoBoardPainter extends CustomPainter {
       final double angle = (i * 3.14159 / points) - (3.14159 / 2);
       final double x = center.dx + r * math.cos(angle);
       final double y = center.dy + r * math.sin(angle);
-      if (i == 0)
+      if (i == 0) {
         path.moveTo(x, y);
-      else
+      } else {
         path.lineTo(x, y);
+      }
     }
     path.close();
     canvas.drawPath(path, paint);

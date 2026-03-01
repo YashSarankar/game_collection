@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 
 class AdService {
   static AdService? _instance;
@@ -19,6 +20,10 @@ class AdService {
   bool _isInterstitialAdReady = false;
 
   Future<void> _init() async {
+    if (Platform.isIOS) {
+      // Request tracking authorization for iOS 14.5+
+      await AppTrackingTransparency.requestTrackingAuthorization();
+    }
     await MobileAds.instance.initialize();
     _loadInterstitialAd();
   }

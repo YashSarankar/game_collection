@@ -175,11 +175,12 @@ class _Match3WidgetState extends State<Match3Widget>
       });
       await Future.delayed(const Duration(milliseconds: 30));
     }
-    if (mounted)
+    if (mounted) {
       setState(() {
         _shakeX = 0;
         _shakeY = 0;
       });
+    }
   }
 
   void _addFloatingText(String text, Color color) {
@@ -926,7 +927,7 @@ class _FloatingTextWidgetState extends State<_FloatingTextWidget>
     return Center(
       child: AnimatedBuilder(
         animation: _c,
-        builder: (_, __) => Transform.translate(
+        builder: (_, _) => Transform.translate(
           offset: Offset(0, _y.value),
           child: FadeTransition(
             opacity: _opacity,

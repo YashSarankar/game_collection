@@ -256,7 +256,7 @@ class _ChessWidgetState extends State<ChessWidget> {
             ..rotateX(_tiltX)
             ..rotateY(_tiltY),
           alignment: FractionalOffset.center,
-          child: Container(
+          child: SizedBox(
             width: size,
             height: size,
             child: ClipRRect(

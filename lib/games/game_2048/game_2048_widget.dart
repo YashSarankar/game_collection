@@ -156,7 +156,9 @@ class _Game2048WidgetState extends State<Game2048Widget>
     } else {
       for (int c = 0; c < size; c++) {
         List<int> line = [];
-        for (int r = 0; r < size; r++) line.add(newGrid[r][c]);
+        for (int r = 0; r < size; r++) {
+          line.add(newGrid[r][c]);
+        }
 
         if (direction == Direction.down) line = line.reversed.toList();
 

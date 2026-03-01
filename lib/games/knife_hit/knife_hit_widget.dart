@@ -171,8 +171,9 @@ class _KnifeHitWidgetState extends State<KnifeHitWidget>
 
   void _throwKnife() {
     // Robustness: Only allow throw if not already flying and game is active
-    if (!_isPlaying || _isKnifeFlying || _isGameOver || _isLevelComplete)
+    if (!_isPlaying || _isKnifeFlying || _isGameOver || _isLevelComplete) {
       return;
+    }
 
     setState(() {
       _isKnifeFlying = true;

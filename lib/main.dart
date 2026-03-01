@@ -71,7 +71,7 @@ class MyApp extends StatelessWidget {
             colorScheme: ColorScheme.fromSeed(
               seedColor: const Color(0xFFFF8C00),
               brightness: Brightness.light,
-              background: const Color(0xFFF2F2F7), // iOS Light Background
+              surface: const Color(0xFFF2F2F7), // iOS Light Background
             ),
             scaffoldBackgroundColor: const Color(0xFFF2F2F7),
             appBarTheme: const AppBarTheme(
@@ -88,7 +88,7 @@ class MyApp extends StatelessWidget {
             colorScheme: ColorScheme.fromSeed(
               seedColor: const Color(0xFFFF8C00),
               brightness: Brightness.dark,
-              background: const Color(0xFF000000), // iOS Dark Background
+              surface: const Color(0xFF000000), // iOS Dark Background
             ),
             scaffoldBackgroundColor: const Color(0xFF000000),
             appBarTheme: const AppBarTheme(

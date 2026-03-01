@@ -179,8 +179,9 @@ class _BalloonPopWidgetState extends State<BalloonPopWidget>
   }
 
   void _spawnBalloon() {
-    if (balloons.length >= GameConstants.balloonPopMaxBalloons + (score ~/ 100))
+    if (balloons.length >= GameConstants.balloonPopMaxBalloons + (score ~/ 100)) {
       return;
+    }
 
     final color = GameColors
         .balloonColors[_random.nextInt(GameColors.balloonColors.length)];
@@ -334,7 +335,7 @@ class _BalloonPopWidgetState extends State<BalloonPopWidget>
                     balloon.radius,
                 child: _BalloonWidget(balloon: balloon, isDark: isDark),
               );
-            }).toList(),
+            }),
 
             // Header
             Positioned(

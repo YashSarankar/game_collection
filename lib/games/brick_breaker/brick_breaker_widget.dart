@@ -1,10 +1,13 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/models/game_model.dart';
 import '../../core/services/haptic_service.dart';
+import '../../core/services/sound_service.dart';
 import '../../ui/widgets/game_countdown.dart';
 import '../../ui/widgets/game_over_dialog.dart';
 import 'brick_breaker_game.dart';
+import 'brick_breaker_themes.dart';
 
 class BrickBreakerWidget extends StatefulWidget {
   final GameModel game;
@@ -18,7 +21,11 @@ class BrickBreakerWidget extends StatefulWidget {
 class _BrickBreakerWidgetState extends State<BrickBreakerWidget> {
   BrickBreakerGame? _game;
   int currentScore = 0;
+  int currentCombo = 0;
+  String levelText = "Level 1";
+  Color levelColor = Colors.cyan;
   HapticService? _hapticService;
+  SoundService? _soundService;
 
   bool _isInitialized = false;
   bool _showCountdown = false;
@@ -26,52 +33,39 @@ class _BrickBreakerWidgetState extends State<BrickBreakerWidget> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final ballColor = isDark ? Colors.white : Colors.black87;
-    const paddleColor = Color(0xFFFF8C00);
-    final bgColor = theme.scaffoldBackgroundColor;
-
     if (!_isInitialized) {
-      _initializeGame(
-        ballColor: ballColor,
-        paddleColor: paddleColor,
-        bgColor: bgColor,
-      );
+      _initializeGame();
       _isInitialized = true;
-    } else if (_game != null) {
-      _game!.updateColors(
-        ballColor: ballColor,
-        paddleColor: paddleColor,
-        gameBackgroundColor: bgColor,
-      );
     }
   }
 
-  Future<void> _initializeGame({
-    required Color ballColor,
-    required Color paddleColor,
-    required Color bgColor,
-  }) async {
+  Future<void> _initializeGame() async {
     _hapticService = await HapticService.getInstance();
+    _soundService = await SoundService.getInstance();
 
     if (!mounted) return;
 
     setState(() {
       _game = BrickBreakerGame(
         hapticService: _hapticService,
-        ballColor: ballColor,
-        paddleColor: paddleColor,
-        gameBackgroundColor: bgColor,
+        soundService: _soundService,
         onGameOver: _showGameOverDialog,
         onScoreUpdate: (score) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() {
-                currentScore = score;
-              });
-            }
-          });
+          if (mounted) setState(() => currentScore = score);
+        },
+        onComboUpdate: (combo) {
+          if (mounted) setState(() => currentCombo = combo);
+        },
+        onLevelUpdate: (text, color) {
+          if (mounted) {
+            setState(() {
+              levelText = text;
+              levelColor = color;
+            });
+          }
+        },
+        onStartRequest: () {
+          if (mounted) setState(() => _showCountdown = true);
         },
       );
     });
@@ -88,13 +82,7 @@ class _BrickBreakerWidgetState extends State<BrickBreakerWidget> {
           score: currentScore,
           onRestart: () {
             Navigator.pop(context);
-            final theme = Theme.of(context);
-            final isDark = theme.brightness == Brightness.dark;
-            _initializeGame(
-              ballColor: isDark ? Colors.white : Colors.black87,
-              paddleColor: const Color(0xFFFF8C00),
-              bgColor: theme.scaffoldBackgroundColor,
-            );
+            _initializeGame();
           },
           onHome: () {
             Navigator.pop(context);
@@ -108,111 +96,140 @@ class _BrickBreakerWidgetState extends State<BrickBreakerWidget> {
   @override
   Widget build(BuildContext context) {
     if (_game == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : Colors.black;
-    final overlayColor = isDark
-        ? Colors.white.withOpacity(0.5)
-        : Colors.black.withOpacity(0.5);
+    final theme = BrickBreakerTheme.defaultTheme;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: theme.backgroundColor,
       body: Stack(
         children: [
           // Game Engine
-          GestureDetector(
-            onTapDown: (_) {
-              if (!_game!.isGameStarted &&
-                  !_game!.isGameOver &&
-                  !_showCountdown) {
-                setState(() => _showCountdown = true);
-              }
-            },
-            child: GameWidget(game: _game!),
-          ),
+          GameWidget(game: _game!),
 
-          // UI Header
+          // minimal HUD
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: SafeArea(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: Stack(
-                  alignment: Alignment.center,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    if (!_game!.isGameStarted && !_game!.isGameOver)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            color: textColor,
-                            size: 22,
-                          ),
-                        ),
-                      ),
-                    Text(
-                      widget.game.title,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: textColor,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: Text(
-                          'Score: $currentScore',
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'SCORE',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 10,
+                            color: Colors.white.withOpacity(0.5),
                             fontWeight: FontWeight.bold,
-                            color: textColor.withOpacity(0.9),
+                            letterSpacing: 1.2,
                           ),
                         ),
-                      ),
+                        Text(
+                          '$currentScore'.padLeft(6, '0'),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
                     ),
+                    Text(
+                      levelText.toUpperCase(),
+                      style: TextStyle(
+                        color: levelColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 2,
+                        shadows: [Shadow(color: levelColor, blurRadius: 10)],
+                      ),
+                    ).animate(key: ValueKey(levelText)).fadeIn().scale(),
                   ],
                 ),
               ),
             ),
           ),
 
-          // Start overlay hint
-          if (!_game!.isGameStarted && !_game!.isGameOver && !_showCountdown)
+          // Combo Multiplier
+          if (currentCombo > 1)
             Positioned(
-              bottom: 150,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Text(
-                  "Tap to Start Countdown\nDrag to Move",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: overlayColor, fontSize: 18),
+              top: 100,
+              right: 20,
+              child: Column(
+                children: [
+                  Text(
+                    '${currentCombo}x',
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w900,
+                      color: theme.glowColor,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ).animate(key: ValueKey(currentCombo)).scale().shake(),
+                ],
+              ),
+            ),
+
+          // Start Overlay (Non-blocking for drags)
+          if (!_game!.isGameStarted && !_game!.isGameOver && !_showCountdown)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  color: Colors.black26,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Spacer(),
+                      const Text(
+                            "TAP TO START",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 4,
+                            ),
+                          )
+                          .animate(onPlay: (c) => c.repeat(reverse: true))
+                          .fadeOut(duration: 800.ms),
+                      const SizedBox(height: 80),
+                    ],
+                  ),
                 ),
               ),
             ),
 
-          // Global Countdown Overlay
+          // Global Countdown Overlay (Non-blocking for drags)
           if (_showCountdown)
-            Container(
-              color: Colors.black26,
-              child: GameCountdown(
-                onFinished: () {
-                  if (mounted) {
-                    _game!.startGame();
-                    Future.delayed(const Duration(milliseconds: 800), () {
-                      if (mounted) setState(() => _showCountdown = false);
-                    });
-                  }
-                },
+            Positioned.fill(
+              child: IgnorePointer(
+                ignoring:
+                    false, // We want the countdown to finish, but actually the countdown is automated.
+                // However, we want the GAME to handle the drag.
+                // If we use IgnorePointer, the GameWidget underneath WILL get the drag.
+                child: Container(
+                  color: Colors.black54,
+                  child: GameCountdown(
+                    onFinished: () {
+                      if (mounted) {
+                        _game!.startGame();
+                        Future.delayed(const Duration(milliseconds: 800), () {
+                          if (mounted) setState(() => _showCountdown = false);
+                        });
+                      }
+                    },
+                  ),
+                ),
               ),
             ),
         ],

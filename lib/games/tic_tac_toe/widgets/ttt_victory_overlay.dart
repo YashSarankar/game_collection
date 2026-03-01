@@ -64,13 +64,12 @@ class Particle {
   late Color color;
   late double opacity;
 
-  Particle({required Random random, required Color color}) {
+  Particle({required Random random, required this.color}) {
     x = random.nextDouble() * 400;
     y = random.nextDouble() * 800;
     vx = (random.nextDouble() - 0.5) * 5;
     vy = (random.nextDouble() - 0.5) * 5;
     size = random.nextDouble() * 5 + 2;
-    this.color = color;
     opacity = random.nextDouble();
   }
 

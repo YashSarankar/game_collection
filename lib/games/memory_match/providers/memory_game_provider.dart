@@ -157,10 +157,11 @@ class MemoryGameProvider extends ChangeNotifier {
 
   void _switchTurn() {
     isPlayer1Turn = !isPlayer1Turn;
-    if (isPlayer1Turn)
+    if (isPlayer1Turn) {
       player1Combo = 0;
-    else
+    } else {
       player2Combo = 0;
+    }
     _resetTurnTimer();
     if (isSuddenDeath) turnTimeRemaining = 8; // Faster turns in sudden death
     notifyListeners();

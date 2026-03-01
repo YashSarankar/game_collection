@@ -79,10 +79,11 @@ class _Match3GameScreenState extends State<Match3GameScreen>
 
     // Auto remove after 1s
     Future.delayed(const Duration(seconds: 1), () {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _effects.removeAt(0);
         });
+      }
     });
   }
 

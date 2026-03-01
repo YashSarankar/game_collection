@@ -84,15 +84,17 @@ class ChessController extends ChangeNotifier {
         return;
       }
       if (board.turn == PlayerColor.white) {
-        if (whiteTime > 0)
+        if (whiteTime > 0) {
           whiteTime--;
-        else
+        } else {
           _endGame("White out of time!");
+        }
       } else {
-        if (blackTime > 0)
+        if (blackTime > 0) {
           blackTime--;
-        else
+        } else {
           _endGame("Black out of time!");
+        }
       }
       notifyListeners();
     });

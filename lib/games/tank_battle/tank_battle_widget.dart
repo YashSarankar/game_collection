@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:flutter/scheduler.dart';
-import 'tank_battle_logic.dart';import '../../core/services/haptic_service.dart';
+import 'tank_battle_logic.dart';
+import '../../core/services/haptic_service.dart';
 import '../../core/services/sound_service.dart';
 import '../../ui/widgets/game_countdown.dart';
 import '../../ui/widgets/game_over_dialog.dart';
@@ -44,6 +45,7 @@ class _TankBattleWidgetState extends State<TankBattleWidget>
     // Only shooting sound - movement and rotation sounds removed due to performance issues
     _logic.onTankShoot = () {
       _soundService?.playMoveSound('sounds/tank_shoot.mp3');
+      _hapticService?.medium();
     };
   }
 
@@ -561,7 +563,9 @@ class _TankBattleWidgetState extends State<TankBattleWidget>
         const SizedBox(height: 12),
         GestureDetector(
           onTap: () {
-            _soundService?.playShootSound('sounds/tank_shoot.mp3'); // Play shoot sound with instant restart
+            _soundService?.playShootSound(
+              'sounds/tank_shoot.mp3',
+            ); // Play shoot sound with instant restart
             onFire();
           },
           child: Container(

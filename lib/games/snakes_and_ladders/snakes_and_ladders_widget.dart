@@ -758,10 +758,6 @@ class _SnakesAndLaddersWidgetState extends State<SnakesAndLaddersWidget>
       child: CustomPaint(painter: DicePainter(value, isDark)),
     );
   }
-
-  Widget _buildWinScreen() {
-    return const SizedBox.shrink(); // Handled by _showGameOver dialog
-  }
 }
 
 class DicePainter extends CustomPainter {

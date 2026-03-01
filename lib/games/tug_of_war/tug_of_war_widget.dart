@@ -29,7 +29,7 @@ class _TugOfWarWidgetState extends State<TugOfWarWidget>
   int _countdownValue = 3;
 
   double _ropePosition = 0.5; // 0.0 = Player 1 wins, 1.0 = Player 2 wins
-  int _gameTime = 15;
+  final int _gameTime = 15;
   int _timeRemaining = 15;
   Timer? _gameTimer;
   Timer? _aiTimer;
@@ -160,8 +160,9 @@ class _TugOfWarWidgetState extends State<TugOfWarWidget>
     final now = DateTime.now();
     if (player == 1) {
       if (_lastTapP1 != null &&
-          now.difference(_lastTapP1!).inMilliseconds < minTapIntervalMs)
+          now.difference(_lastTapP1!).inMilliseconds < minTapIntervalMs) {
         return;
+      }
       _lastTapP1 = now;
 
       setState(() {
@@ -171,8 +172,9 @@ class _TugOfWarWidgetState extends State<TugOfWarWidget>
     } else {
       if (player == 2 && _mode == TugOfWarMode.pvp) {
         if (_lastTapP2 != null &&
-            now.difference(_lastTapP2!).inMilliseconds < minTapIntervalMs)
+            now.difference(_lastTapP2!).inMilliseconds < minTapIntervalMs) {
           return;
+        }
         _lastTapP2 = now;
       }
 

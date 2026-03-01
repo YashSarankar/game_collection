@@ -308,45 +308,44 @@ class _AirHockeyWidgetState extends State<AirHockeyWidget>
                 Positioned.fill(
                   child: Container(color: Colors.white.withOpacity(0.3)),
                 ),
-
-              // Countdown
               if (isCountingDown)
-                Positioned.fill(
-                  child: ClipRect(
-                    child: BackdropFilter(
-                      filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        color: Colors.black.withOpacity(0.6),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text(
-                              "AIR HOCKEY",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 40,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 10,
+                if (isCountingDown)
+                  Positioned.fill(
+                    child: ClipRect(
+                      child: BackdropFilter(
+                        filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          color: Colors.black.withOpacity(0.6),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                "AIR HOCKEY",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 40,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 10,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 48),
-                            const Text(
-                              "FIRST TO 5 GOALS",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 4,
+                              const SizedBox(height: 48),
+                              const Text(
+                                "FIRST TO 5 GOALS",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 4,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 24),
-                            GameCountdown(onFinished: _startGame),
-                          ],
+                              const SizedBox(height: 24),
+                              GameCountdown(onFinished: _startGame),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
 
               // Back Button
               if (!isGameStarted || isCountingDown)

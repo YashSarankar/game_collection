@@ -258,8 +258,9 @@ class Ball extends CircleComponent
   @override
   void update(double dt) {
     super.update(dt);
-    if (!gameRef.isGameStarted || gameRef.isGameOver || gameRef.isPaused)
+    if (!gameRef.isGameStarted || gameRef.isGameOver || gameRef.isPaused) {
       return;
+    }
 
     position += velocity * dt;
 

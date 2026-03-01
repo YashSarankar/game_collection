@@ -516,8 +516,12 @@ class TankBattleLogic {
 
   void _smoothRotate(Tank tank, double targetRotation, double dt) {
     double diff = targetRotation - tank.rotation;
-    while (diff > math.pi) diff -= 2 * math.pi;
-    while (diff < -math.pi) diff += 2 * math.pi;
+    while (diff > math.pi) {
+      diff -= 2 * math.pi;
+    }
+    while (diff < -math.pi) {
+      diff += 2 * math.pi;
+    }
 
     final rotationStep = rotationSpeed * dt;
     if (diff.abs() < rotationStep) {
