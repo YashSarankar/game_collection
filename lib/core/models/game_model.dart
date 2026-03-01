@@ -175,6 +175,7 @@ class GamesList {
       secondaryColor: Color(0xFF2980B9),
       isMultiplayer: true,
     ),
+    /*
     const GameModel(
       id: 'carrom',
       title: 'Carrom',
@@ -186,6 +187,7 @@ class GamesList {
       secondaryColor: Color(0xFFA0522D),
       isMultiplayer: true,
     ),
+    */
     const GameModel(
       id: 'game_2048',
       title: '2048',
