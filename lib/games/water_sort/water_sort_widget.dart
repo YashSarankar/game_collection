@@ -17,14 +17,20 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
     with TickerProviderStateMixin {
   late List<WaterSortBottle> bottles;
   int? selectedIndex;
-  List<WaterSortMove> history = [];
+  List<List<List<Color>>> history = [];
   int difficulty = 2; // Default Medium
   bool _isGameStarted = false;
   bool isGameOver = false;
 
+  // Animation states
+  int? pouringFromIndex;
+  int? pouringToIndex;
+  bool isPouring = false;
+  Color? pouringColor;
+
   // Countdown state
   int _countdown = 3;
-  bool _isCountingDown = true;
+  bool _isCountingDown = false;
   Timer? _countdownTimer;
 
   HapticService? _hapticService;
@@ -33,8 +39,6 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
   void initState() {
     super.initState();
     _initHaptic();
-    // Don't call _startNewGame immediately, wait for user selection
-    _isCountingDown = false;
   }
 
   @override
@@ -48,13 +52,17 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
   }
 
   void _startNewGame() {
-    bottles = WaterSortLogic.generateLevel(difficulty);
-    selectedIndex = null;
-    history = [];
-    isGameOver = false;
-    _isGameStarted = true;
-    _startCountdown();
-    if (mounted) setState(() {});
+    setState(() {
+      bottles = WaterSortLogic.generateLevel(difficulty);
+      selectedIndex = null;
+      history = [];
+      isGameOver = false;
+      isPouring = false;
+      pouringFromIndex = null;
+      pouringToIndex = null;
+      _isGameStarted = true;
+      _startCountdown();
+    });
   }
 
   void _resetToMenu() {
@@ -85,8 +93,24 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
     });
   }
 
+  void _saveState() {
+    history.add(bottles.map((b) => List<Color>.from(b.stack)).toList());
+  }
+
+  void _undo() {
+    if (history.isEmpty || isGameOver || _isCountingDown || isPouring) return;
+
+    List<List<Color>> prev = history.removeLast();
+    setState(() {
+      for (int i = 0; i < bottles.length; i++) {
+        bottles[i].stack = List.from(prev[i]);
+      }
+    });
+    _hapticService?.light();
+  }
+
   void _onBottleTap(int index) {
-    if (isGameOver || _isCountingDown) return;
+    if (isGameOver || _isCountingDown || isPouring) return;
 
     _hapticService?.selectionClick();
 
@@ -106,54 +130,42 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
     });
   }
 
-  void _tryPour(int fromIdx, int toIdx) {
+  Future<void> _tryPour(int fromIdx, int toIdx) async {
     WaterSortBottle from = bottles[fromIdx];
     WaterSortBottle to = bottles[toIdx];
 
     if (WaterSortLogic.canPour(from, to)) {
-      int amount = WaterSortLogic.calculatePourAmount(from, to);
-      List<Color> colorsPoured = [];
+      _saveState();
+      
+      Color pColor = from.topColor!;
 
       setState(() {
-        for (int i = 0; i < amount; i++) {
-          colorsPoured.add(from.layers.removeLast());
-        }
-        for (int i = colorsPoured.length - 1; i >= 0; i--) {
-          to.layers.add(colorsPoured[i]);
-        }
-        history.add(
-          WaterSortMove(
-            fromIndex: fromIdx,
-            toIndex: toIdx,
-            colorsPoured: colorsPoured,
-          ),
-        );
+        isPouring = true;
+        pouringFromIndex = fromIdx;
+        pouringToIndex = toIdx;
+        pouringColor = pColor;
       });
 
       _hapticService?.light();
 
-      if (WaterSortLogic.isWin(bottles)) {
-        _endGame();
+      // Pour animation delay
+      await Future.delayed(const Duration(milliseconds: 400));
+
+      if (mounted) {
+        setState(() {
+          WaterSortLogic.pour(from, to);
+          isPouring = false;
+          pouringFromIndex = null;
+          pouringToIndex = null;
+        });
+
+        if (WaterSortLogic.isWin(bottles)) {
+          _endGame();
+        }
       }
     } else {
       _hapticService?.error();
-      // Visual feedback for invalid move could be added here (e.g., shake animation)
     }
-  }
-
-  void _undo() {
-    if (history.isEmpty || isGameOver || _isCountingDown) return;
-
-    WaterSortMove lastMove = history.removeLast();
-    setState(() {
-      for (int i = 0; i < lastMove.colorsPoured.length; i++) {
-        bottles[lastMove.toIndex].layers.removeLast();
-      }
-      for (int i = lastMove.colorsPoured.length - 1; i >= 0; i--) {
-        bottles[lastMove.fromIndex].layers.add(lastMove.colorsPoured[i]);
-      }
-    });
-    _hapticService?.light();
   }
 
   void _endGame() {
@@ -200,7 +212,10 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
         elevation: 0,
         foregroundColor: isDark ? Colors.white : Colors.black,
         leading: (_isGameStarted && !isGameOver)
-            ? const SizedBox.shrink()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: _resetToMenu,
+              )
             : IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () => Navigator.pop(context),
@@ -210,10 +225,6 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
                 IconButton(
                   icon: const Icon(Icons.refresh),
                   onPressed: _startNewGame,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.menu),
-                  onPressed: _resetToMenu,
                 ),
               ]
             : null,
@@ -227,23 +238,24 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
               children: [
                 _buildHeader(isDark),
                 Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
+                  child: Center(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                      child: _buildBottlesGrid(),
                     ),
-                    child: _buildBottlesGrid(),
                   ),
                 ),
-                const SizedBox(height: 10),
                 _buildControls(isDark),
-                const SizedBox(height: 20),
-                _buildSpecialTools(isDark),
                 const SizedBox(height: 40),
               ],
             ),
           if (_isCountingDown) _buildCountdownOverlay(),
+          if (isPouring && pouringFromIndex != null && pouringToIndex != null)
+             _buildPouringAnimation(),
         ],
       ),
     );
@@ -258,19 +270,19 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
           children: [
             Icon(
               Icons.opacity_rounded,
-              size: 60,
+              size: 64,
               color: widget.game.primaryColor,
             ),
             const SizedBox(height: 16),
             const Text(
-              'SELECT DIFFICULTY',
+              'WATER SORT',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 28,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 2,
+                letterSpacing: 4,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 40),
             ...[1, 2, 3, 4, 5].map((d) {
               final label = [
                 'EASY',
@@ -281,9 +293,9 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
               ][d - 1];
               final isDiff = difficulty == d;
               return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: 12),
                 child: SizedBox(
-                  width: double.infinity,
+                  width: 240,
                   height: 54,
                   child: ElevatedButton(
                     onPressed: () {
@@ -301,19 +313,16 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
                           ? Colors.white
                           : (isDark ? Colors.white70 : Colors.black87),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(
-                          color: isDiff ? Colors.white24 : Colors.transparent,
-                        ),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       elevation: 0,
                     ),
                     child: Text(
                       label,
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
+                        letterSpacing: 1.5,
                       ),
                     ),
                   ),
@@ -326,47 +335,6 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
     );
   }
 
-  Widget _buildSpecialTools(bool isDark) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        ElevatedButton.icon(
-          onPressed: _addHiddenBottle,
-          icon: const Icon(Icons.add_circle_outline, color: Colors.white),
-          label: const Text(
-            'EXTRA BOTTLE',
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange[800],
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _addHiddenBottle() {
-    if (isGameOver || _isCountingDown) return;
-
-    // Simulate rewarded ad check or cost
-    setState(() {
-      bottles.add(WaterSortBottle(layers: []));
-      _hapticService?.heavy();
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Extra Bottle Added!'),
-        duration: Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   Widget _buildHeader(bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -374,7 +342,7 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _buildStatBox(
-            'DIFFICULTY',
+            'LEVEL',
             [
               'Easy',
               'Medium',
@@ -385,54 +353,13 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
             widget.game.primaryColor,
             isDark,
           ),
-          _buildDifficultySelector(isDark),
+          _buildStatBox(
+            'MOVES',
+            '${history.length}',
+            Colors.orange,
+            isDark,
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildDifficultySelector(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      height: 36,
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isDark ? Colors.white10 : Colors.grey[300]!,
-          width: 1,
-        ),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int>(
-          value: difficulty,
-          icon: Icon(
-            Icons.keyboard_arrow_down,
-            size: 18,
-            color: isDark ? Colors.white70 : widget.game.primaryColor,
-          ),
-          dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          style: TextStyle(
-            color: isDark ? Colors.white : widget.game.primaryColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
-          items: [1, 2, 3, 4, 5].map((d) {
-            return DropdownMenuItem(
-              value: d,
-              child: Text(['EASY', 'MED', 'HARD', 'EXPERT', 'BRUTAL'][d - 1]),
-            );
-          }).toList(),
-          onChanged: (val) {
-            if (val != null) {
-              setState(() {
-                difficulty = val;
-                _startNewGame();
-              });
-            }
-          },
-        ),
       ),
     );
   }
@@ -463,20 +390,11 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
   }
 
   Widget _buildBottlesGrid() {
-    int crossAxisCount = bottles.length > 8 ? 4 : 3;
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        childAspectRatio: 0.5,
-        crossAxisSpacing: 20,
-        mainAxisSpacing: 30,
-      ),
-      itemCount: bottles.length,
-      itemBuilder: (context, index) {
-        return _buildBottle(index);
-      },
+    return Wrap(
+      spacing: 25,
+      runSpacing: 40,
+      alignment: WrapAlignment.center,
+      children: List.generate(bottles.length, (index) => _buildBottle(index)),
     );
   }
 
@@ -484,121 +402,105 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     bool isSelected = selectedIndex == index;
+    bool isBeingPouredFrom = pouringFromIndex == index;
     WaterSortBottle bottle = bottles[index];
 
     return GestureDetector(
       onTap: () => _onBottleTap(index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        transform: Matrix4.translationValues(0, isSelected ? -20 : 0, 0),
+      child: TweenAnimationBuilder<double>(
+        duration: const Duration(milliseconds: 300),
+        tween: Tween(begin: 0.0, end: (isSelected || isBeingPouredFrom) ? -30.0 : 0.0),
+        builder: (context, translateY, child) {
+          double rotation = 0;
+          if (isBeingPouredFrom) {
+            rotation = 0.5; // Roughly 30 degrees
+          }
+          return Transform.translate(
+            offset: Offset(0, translateY),
+            child: Transform.rotate(
+              angle: rotation,
+              origin: const Offset(0, -60), // Rotate from top
+              child: child,
+            ),
+          );
+        },
         child: Stack(
           alignment: Alignment.bottomCenter,
+          clipBehavior: Clip.none,
           children: [
             // Bottle Shape
             Container(
+              width: 50,
+              height: 140,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withOpacity(0.05),
                 borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
-                  topLeft: Radius.circular(8),
-                  topRight: Radius.circular(8),
+                  bottomLeft: Radius.circular(25),
+                  bottomRight: Radius.circular(25),
+                  topLeft: Radius.circular(10),
+                  topRight: Radius.circular(10),
                 ),
                 border: Border.all(
                   color: isSelected
                       ? widget.game.primaryColor
-                      : (bottle.isEmpty
-                            ? (isDark ? Colors.white38 : Colors.grey[400]!)
-                            : (isDark ? Colors.white24 : Colors.grey[300]!)),
-                  width: bottle.isEmpty ? 2.5 : 2,
+                      : (isDark ? Colors.white24 : Colors.grey[300]!),
+                  width: isSelected ? 3 : 2,
                 ),
+                boxShadow: isSelected ? [
+                  BoxShadow(
+                    color: widget.game.primaryColor.withOpacity(0.4),
+                    blurRadius: 15,
+                    spreadRadius: 2,
+                  )
+                ] : null,
               ),
               child: ClipRRect(
                 borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(17),
-                  bottomRight: Radius.circular(17),
-                  topLeft: Radius.circular(5),
-                  topRight: Radius.circular(5),
+                  bottomLeft: Radius.circular(22),
+                  bottomRight: Radius.circular(22),
+                  topLeft: Radius.circular(8),
+                  topRight: Radius.circular(8),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    for (
-                      int i = 0;
-                      i < bottle.capacity - bottle.layers.length;
-                      i++
-                    )
-                      Expanded(child: Container()),
-                    for (int i = bottle.layers.length - 1; i >= 0; i--)
+                    for (int i = bottle.stack.length - 1; i >= 0; i--)
                       Expanded(
                         child: Container(
                           width: double.infinity,
-                          margin: const EdgeInsets.all(1),
+                          margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 0.5),
                           decoration: BoxDecoration(
-                            color:
-                                (bottle.isMystery &&
-                                    i < bottle.layers.length - 1)
-                                ? Colors.grey[800]
-                                : bottle.layers[i],
-                            borderRadius: BorderRadius.circular(4),
+                            color: bottle.stack[i],
                             gradient: LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors:
-                                  (bottle.isMystery &&
-                                      i < bottle.layers.length - 1)
-                                  ? [Colors.grey[700]!, Colors.grey[800]!]
-                                  : [
-                                      bottle.layers[i].withOpacity(0.8),
-                                      bottle.layers[i],
-                                    ],
+                              colors: [
+                                bottle.stack[i].withOpacity(0.7),
+                                bottle.stack[i],
+                              ],
                             ),
                           ),
-                          child:
-                              (bottle.isMystery && i < bottle.layers.length - 1)
-                              ? const Center(
-                                  child: Text(
-                                    '?',
-                                    style: TextStyle(
-                                      color: Colors.white24,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                )
-                              : null,
                         ),
                       ),
-                  ],
+                    for (int i = 0; i < bottle.capacity - bottle.stack.length; i++)
+                      Expanded(child: Container()),
+                  ].reversed.toList(),
                 ),
               ),
             ),
-            // Glass reflection
+            // Glass Highlight
             Positioned(
-              top: 10,
-              left: 8,
-              width: 4,
-              height: 40,
+              top: 15,
+              left: 10,
               child: Container(
+                width: 4,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            if (bottle.isEmpty)
-              Positioned(
-                top: 20,
-                child: Text(
-                  'EMPTY',
-                  style: TextStyle(
-                    fontSize: 8,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white10 : Colors.grey[200],
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -606,25 +508,27 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
   }
 
   Widget _buildControls(bool isDark) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildActionButton(
-          onPressed: _undo,
-          icon: Icons.undo_rounded,
-          label: 'Undo',
-          color: Colors.grey,
-          isDark: isDark,
-        ),
-        const SizedBox(width: 40),
-        _buildActionButton(
-          onPressed: _startNewGame,
-          icon: Icons.refresh_rounded,
-          label: 'Reset',
-          color: widget.game.primaryColor,
-          isDark: isDark,
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildActionButton(
+            onPressed: _undo,
+            icon: Icons.undo_rounded,
+            label: 'UNDO',
+            color: Colors.blueAccent,
+            isDark: isDark,
+          ),
+          _buildActionButton(
+            onPressed: _startNewGame,
+            icon: Icons.refresh_rounded,
+            label: 'RESET',
+            color: widget.game.primaryColor,
+            isDark: isDark,
+          ),
+        ],
+      ),
     );
   }
 
@@ -653,9 +557,10 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
           Text(
             label,
             style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
               color: isDark ? Colors.white70 : Colors.black87,
+              letterSpacing: 1,
             ),
           ),
         ],
@@ -665,10 +570,10 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
 
   Widget _buildCountdownOverlay() {
     return Container(
-      color: Colors.black.withOpacity(0.7),
+      color: Colors.black.withOpacity(0.6),
       child: Center(
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 500),
+          duration: const Duration(milliseconds: 400),
           transitionBuilder: (Widget child, Animation<double> animation) {
             return ScaleTransition(scale: animation, child: child);
           },
@@ -684,5 +589,12 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
         ),
       ),
     );
+  }
+
+  Widget _buildPouringAnimation() {
+    // This is a simplified "stream" between bottles.
+    // In a real production app, you'd calculate exact coordinates.
+    // Here we'll just show a "pouring" state visually via bottle tilting.
+    return const SizedBox.shrink(); // Tilting handled in _buildBottle
   }
 }
