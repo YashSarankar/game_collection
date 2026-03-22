@@ -48,6 +48,9 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
   HapticService? _hapticService;
   SoundService? _soundService;
 
+  final Map<int, List<int>> _playerLastRolls = {};
+  final Map<int, int> _playerConsecutiveSixes = {};
+
   LudoGameState _gameState = LudoGameState.selection;
   int _playerCount = 4;
   List<int> finishedPlayers = []; // Indices of players who completed the game
@@ -106,7 +109,8 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
     movablePieceIndices = [];
     diceValue = 1;
 
-    _soundService?.playSound('sounds/game_start.mp3');
+    _playerLastRolls.clear();
+    _playerConsecutiveSixes.clear();
 
     setState(() {
       _gameState = LudoGameState.playing;
@@ -123,8 +127,9 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
     });
 
     _hapticService?.light();
+    _soundService?.playSound('sounds/dice_roll.mp3');
 
-    int finalRoll = _random.nextInt(6) + 1;
+    int finalRoll = _generateSmartDiceValue(currentPlayerIndex);
 
     for (int i = 0; i < 8; i++) {
       await Future.delayed(const Duration(milliseconds: 75));
@@ -146,6 +151,129 @@ class _LudoWidgetState extends State<LudoWidget> with TickerProviderStateMixin {
 
     _hapticService?.medium();
     _calculateMovablePieces();
+  }
+
+  int _generateSmartDiceValue(int playerIndex) {
+    int roll = _random.nextInt(6) + 1;
+
+    // 2. Anti-Streak System
+    _playerLastRolls.putIfAbsent(playerIndex, () => []);
+    var lastRolls = _playerLastRolls[playerIndex]!;
+    
+    if (lastRolls.length >= 3) {
+      bool same = lastRolls.every((r) => r == lastRolls[0]);
+      if (same) {
+        do {
+          roll = _random.nextInt(6) + 1;
+        } while (roll == lastRolls[0]);
+      }
+    }
+
+    // 3. Smart 6 Control
+    _playerConsecutiveSixes.putIfAbsent(playerIndex, () => 0);
+    int consecutiveSixes = _playerConsecutiveSixes[playerIndex]!;
+    
+    // 4. Comeback Assistance
+    bool isLosing = _isPlayerLosing(playerIndex);
+    if (isLosing && _random.nextDouble() < 0.2) {
+      roll = [5, 6][_random.nextInt(2)];
+    }
+
+    // 5. Context-Aware Dice
+    bool hasNoOpenPiece = !_playerHasOpenPiece(playerIndex);
+    bool nearKill = _isPlayerNearKill(playerIndex);
+    
+    if (hasNoOpenPiece && _random.nextDouble() < 0.25) {
+      roll = 6; 
+    }
+    
+    int requiredSteps = _requiredStepsToKill(playerIndex);
+    if (nearKill && requiredSteps > 0 && requiredSteps <= 6 && _random.nextDouble() < 0.2) {
+      roll = requiredSteps;
+    }
+
+    // Apply 6 control at the end to ensure we never override max 6s rule
+    if (consecutiveSixes >= 2 && roll == 6) {
+      do {
+        roll = _random.nextInt(6) + 1;
+      } while (roll == 6);
+    }
+
+    // Update histories
+    lastRolls.add(roll);
+    if (lastRolls.length > 5) lastRolls.removeAt(0);
+
+    if (roll == 6) {
+      _playerConsecutiveSixes[playerIndex] = consecutiveSixes + 1;
+    } else {
+       _playerConsecutiveSixes[playerIndex] = 0;
+    }
+
+    return roll;
+  }
+
+  bool _isPlayerLosing(int playerIndex) {
+    int myScore = _getPlayerScore(playerIndex);
+    int maxScore = 0;
+    List<int> activePlayers = _playerCount == 2 ? [0, 2] : (_playerCount == 3 ? [0, 1, 2] : [0, 1, 2, 3]);
+    for (int p in activePlayers) {
+      int score = _getPlayerScore(p);
+      if (score > maxScore) maxScore = score;
+    }
+    return myScore < maxScore * 0.5 && maxScore > 20; 
+  }
+
+  int _getPlayerScore(int playerIndex) {
+    int score = 0;
+    for (var p in pieces) {
+      if (p.playerIndex == playerIndex) {
+        if (p.status == PieceStatus.finished) {
+          score += 100;
+        } else {
+          score += p.position;
+        }
+      }
+    }
+    return score;
+  }
+
+  bool _playerHasOpenPiece(int playerIndex) {
+    for (var p in pieces) {
+      if (p.playerIndex == playerIndex && (p.status == PieceStatus.active || p.status == PieceStatus.home)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _isPlayerNearKill(int playerIndex) {
+    return _requiredStepsToKill(playerIndex) > 0;
+  }
+
+  int _requiredStepsToKill(int playerIndex) {
+    for (var myPiece in pieces) {
+      if (myPiece.playerIndex != playerIndex) continue;
+      if (myPiece.status != PieceStatus.active) continue;
+
+      for (int steps = 1; steps <= 6; steps++) {
+        int targetRelativePos = myPiece.position + steps;
+        if (targetRelativePos > 51) continue;
+
+        int targetGlobalIdx = _getGlobalIndex(playerIndex, targetRelativePos);
+        if (safeSquares.contains(targetGlobalIdx)) continue;
+
+        for (var oppPiece in pieces) {
+          if (oppPiece.playerIndex == playerIndex) continue;
+          if (oppPiece.status != PieceStatus.active) continue;
+
+          int oppGlobalIdx = _getGlobalIndex(oppPiece.playerIndex, oppPiece.position);
+          if (oppGlobalIdx == targetGlobalIdx) {
+            return steps;
+          }
+        }
+      }
+    }
+    return -1;
   }
 
   void _calculateMovablePieces() {
