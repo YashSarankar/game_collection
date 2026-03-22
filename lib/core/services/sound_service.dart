@@ -7,7 +7,8 @@ class SoundService {
   final StorageService _storage;
   final AudioPlayer _dicePlayer = AudioPlayer();
   final AudioPlayer _movePlayer = AudioPlayer();
-  final AudioPlayer _shootPlayer = AudioPlayer(); // Dedicated for rapid-fire shooting sounds
+  final List<AudioPlayer> _shootPlayers = List.generate(5, (_) => AudioPlayer());
+  int _currentShootPlayerIndex = 0;
   bool _isSoundEnabled = true;
 
   SoundService._(this._storage);
@@ -25,7 +26,9 @@ class SoundService {
     _isSoundEnabled = await _storage.getSoundEnabled();
     await _dicePlayer.setReleaseMode(ReleaseMode.stop);
     await _movePlayer.setReleaseMode(ReleaseMode.stop);
-    await _shootPlayer.setReleaseMode(ReleaseMode.stop);
+    for (var player in _shootPlayers) {
+      await player.setReleaseMode(ReleaseMode.stop);
+    }
   }
 
   Future<void> setSoundEnabled(bool enabled) async {
@@ -64,8 +67,10 @@ class SoundService {
     if (!_isSoundEnabled) return;
 
     try {
-      _shootPlayer.stop();
-      _shootPlayer.play(AssetSource(soundPath));
+      final player = _shootPlayers[_currentShootPlayerIndex];
+      player.stop();
+      player.play(AssetSource(soundPath));
+      _currentShootPlayerIndex = (_currentShootPlayerIndex + 1) % _shootPlayers.length;
     } catch (e) {
       // Silently fail if sound file doesn't exist
     }
@@ -108,6 +113,8 @@ class SoundService {
   void dispose() {
     _dicePlayer.dispose();
     _movePlayer.dispose();
-    _shootPlayer.dispose();
+    for (var player in _shootPlayers) {
+      player.dispose();
+    }
   }
 }
