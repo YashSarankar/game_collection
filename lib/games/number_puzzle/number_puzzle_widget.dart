@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/models/game_model.dart';
 import '../../core/providers/score_provider.dart';
 import '../../core/services/haptic_service.dart';
+import '../../core/services/sound_service.dart';
 
 class NumberPuzzleWidget extends StatefulWidget {
   final GameModel game;
@@ -21,6 +22,7 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
   int moves = 0;
   bool isSolved = false;
   HapticService? _hapticService;
+  SoundService? _soundService;
   late AnimationController _winController;
 
   // Countdown state
@@ -31,7 +33,7 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
   @override
   void initState() {
     super.initState();
-    _initHaptic();
+    _initServices();
     _winController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -46,8 +48,9 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
     super.dispose();
   }
 
-  Future<void> _initHaptic() async {
+  Future<void> _initServices() async {
     _hapticService = await HapticService.getInstance();
+    _soundService = await SoundService.getInstance();
   }
 
   void _startNewGame() {
@@ -65,6 +68,7 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
     _isCountingDown = true;
     _countdown = 3;
     _countdownTimer?.cancel();
+    _soundService?.playGameStart();
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {
@@ -108,6 +112,7 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
     int emptyIndex = tiles.indexOf(0);
     if (_isAdjacent(index, emptyIndex)) {
       _hapticService?.light();
+      _soundService?.playMoveSound('sounds/pop.mp3');
       setState(() {
         tiles[emptyIndex] = tiles[index];
         tiles[index] = 0;
@@ -117,9 +122,12 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
 
       if (isSolved) {
         _hapticService?.success();
+        _soundService?.playSuccess();
         _winController.forward();
         context.read<ScoreProvider>().saveScore(widget.game.id, moves);
       }
+    } else {
+      _hapticService?.error();
     }
   }
 
@@ -137,7 +145,8 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
         return;
       }
     }
-    isSolved = tiles.last == 0;
+    isSolved =
+        true; // The last tile is implicitly zero if all others are correct
   }
 
   @override
@@ -183,63 +192,111 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 60, 24, 20),
+      padding: const EdgeInsets.fromLTRB(24, 60, 24, 32),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.game.title,
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: -0.5,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Hero(
+                  tag: 'game_title_${widget.game.id}',
+                  child: Text(
+                    widget.game.title,
+                    style: const TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -1,
+                    ),
+                  ),
                 ),
-              ),
-              const Text(
-                'Slide tiles to solve',
-                style: TextStyle(color: Colors.white60, fontSize: 16),
-              ),
-            ],
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [widget.game.primaryColor, widget.game.secondaryColor],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: widget.game.primaryColor.withOpacity(0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                Container(
+                  margin: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: widget.game.primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: widget.game.primaryColor.withOpacity(0.2)),
+                        ),
+                        child: const Text(
+                          'BRAIN GYM CHALLENGE',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.trending_up, color: Colors.white54, size: 12),
+                            SizedBox(width: 4),
+                            Text(
+                              'ORDER: 1-15',
+                              style: TextStyle(color: Colors.white54, fontSize: 8, fontWeight: FontWeight.w900),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-            child: Column(
-              children: [
-                const Text(
-                  'MOVES',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-                Text(
-                  '$moves',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+          ),
+          _buildScoreCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScoreCard() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            'MOVES',
+            style: TextStyle(
+              color: widget.game.primaryColor.withOpacity(0.8),
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$moves',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              fontFamily: 'monospace',
             ),
           ),
         ],
@@ -248,36 +305,102 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
   }
 
   Widget _buildGrid(BoxConstraints constraints) {
-    double spacing = 8.0;
+    // Calculate sizing with safety margin to prevent edge clipping
+    double spacing = 10.0;
+    double totalSpacing = spacing * (size + 1);
     double gridSize = constraints.maxWidth;
-    double tileSize = (gridSize - (spacing * (size + 1))) / size;
+    // We subtract an extra 4 pixels of "safe area" to prevent edge bleed
+    double tileSize = (gridSize - totalSpacing - 4) / size;
+    double offsetAdjustment = 2.0; // Half of our safe area to center the grid
 
     return Container(
       padding: EdgeInsets.all(spacing),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        color: Colors.white.withOpacity(0.02),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Stack(
+        clipBehavior:
+            Clip.none, // Allow elastic bounce to briefly go outside if needed
         children: [
+          // Grid placeholders
           for (int i = 0; i < size * size; i++)
             Positioned(
-              left: (i % size) * (tileSize + spacing),
-              top: (i ~/ size) * (tileSize + spacing),
+              left: offsetAdjustment + (i % size) * (tileSize + spacing),
+              top: offsetAdjustment + (i ~/ size) * (tileSize + spacing),
               child: Container(
                 width: tileSize,
                 height: tileSize,
                 decoration: BoxDecoration(
-                  color: Colors.black26,
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.black.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withOpacity(0.03)),
+                ),
+                child: Center(
+                  child: Text(
+                    i == 15 ? "" : "${i + 1}",
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.03),
+                      fontSize: tileSize * 0.35,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                 ),
               ),
             ),
+          // Actual tiles
           for (int i = 0; i < tiles.length; i++)
             if (tiles[i] != 0)
-              _buildAnimatedTile(tiles[i], i, tileSize, spacing),
+              _buildAnimatedTile(
+                tiles[i],
+                i,
+                tileSize,
+                spacing,
+                offsetAdjustment,
+              )
+            else if (isSolved)
+              _buildSolvedEmptyTile(i, tileSize, spacing, offsetAdjustment),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSolvedEmptyTile(
+    int index,
+    double tileSize,
+    double spacing,
+    double offset,
+  ) {
+    return Positioned(
+      left: offset + (index % size) * (tileSize + spacing),
+      top: offset + (index ~/ size) * (tileSize + spacing),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 800),
+        builder: (context, value, child) {
+          return Transform.scale(
+            scale: value,
+            child: Container(
+              width: tileSize,
+              height: tileSize,
+              decoration: BoxDecoration(
+                color: widget.game.primaryColor.withOpacity(0.3 * value),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: widget.game.primaryColor.withOpacity(0.5 * value),
+                ),
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.star_rounded,
+                  color: Colors.white.withOpacity(0.8 * value),
+                  size: tileSize * 0.5,
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -287,12 +410,13 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
     int index,
     double tileSize,
     double spacing,
+    double offset,
   ) {
     return AnimatedPositioned(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOutBack,
-      left: (index % size) * (tileSize + spacing),
-      top: (index ~/ size) * (tileSize + spacing),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.elasticOut,
+      left: offset + (index % size) * (tileSize + spacing),
+      top: offset + (index ~/ size) * (tileSize + spacing),
       child: GestureDetector(
         onTap: () => _onTileTap(index),
         child: Container(
@@ -302,24 +426,51 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [widget.game.primaryColor, widget.game.secondaryColor],
+              colors: [
+                widget.game.primaryColor.withOpacity(0.9),
+                widget.game.secondaryColor,
+              ],
             ),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.4),
-                blurRadius: 8,
-                offset: const Offset(2, 2),
+                color: widget.game.primaryColor.withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(4, 4),
+              ),
+              BoxShadow(
+                color: Colors.white.withOpacity(0.1),
+                blurRadius: 2,
+                offset: const Offset(-2, -2),
               ),
             ],
           ),
-          child: Center(
-            child: Text(
-              '$value',
-              style: TextStyle(
-                fontSize: tileSize * 0.4,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withOpacity(0.2)),
+            ),
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    '$value',
+                    style: TextStyle(
+                      fontSize: tileSize * 0.38,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.3),
+                          offset: const Offset(1, 1),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),

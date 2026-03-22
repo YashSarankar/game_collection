@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/models/game_model.dart';
 import '../../core/providers/score_provider.dart';
 import '../../core/services/haptic_service.dart';
+import '../../core/services/sound_service.dart';
 import 'game_2048_engine.dart';
 
 class Game2048Widget extends StatefulWidget {
@@ -16,11 +17,11 @@ class Game2048Widget extends StatefulWidget {
 
 class _Game2048WidgetState extends State<Game2048Widget>
     with SingleTickerProviderStateMixin {
-  static const int size = 4;
   late Game2048Engine engine;
   bool isGameOver = false;
   bool isGameWon = false;
   HapticService? _hapticService;
+  SoundService? _soundService;
 
   // Timer state
   Timer? _timer;
@@ -35,7 +36,7 @@ class _Game2048WidgetState extends State<Game2048Widget>
   @override
   void initState() {
     super.initState();
-    _initHaptic();
+    _initServices();
     _startNewGame();
   }
 
@@ -46,8 +47,9 @@ class _Game2048WidgetState extends State<Game2048Widget>
     super.dispose();
   }
 
-  Future<void> _initHaptic() async {
+  Future<void> _initServices() async {
     _hapticService = await HapticService.getInstance();
+    _soundService = await SoundService.getInstance();
   }
 
   void _startTimer() {
@@ -68,7 +70,7 @@ class _Game2048WidgetState extends State<Game2048Widget>
   }
 
   void _startNewGame() {
-    engine = Game2048Engine(size: size);
+    engine = Game2048Engine(size: 4);
     _secondsElapsed = 0;
     isGameOver = false;
     isGameWon = false;
@@ -82,6 +84,7 @@ class _Game2048WidgetState extends State<Game2048Widget>
     _isCountingDown = true;
     _countdown = 3;
     _countdownTimer?.cancel();
+    _soundService?.playGameStart();
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {
@@ -92,9 +95,6 @@ class _Game2048WidgetState extends State<Game2048Widget>
             _isCountingDown = false;
             _hapticService?.heavy();
             timer.cancel();
-            // Actually starting the game timer only after the first move or here?
-            // Usually game timer starts on first move.
-            // The existing _move logic starts the timer.
           }
         });
       }
@@ -114,11 +114,13 @@ class _Game2048WidgetState extends State<Game2048Widget>
 
     if (moved) {
       _hapticService?.light();
+      _soundService?.playMoveSound('sounds/pop.mp3');
       
       int moveScore = engine.score - oldScore;
       
       if (engine.hasWon() && !isGameWon) {
         isGameWon = true;
+        _soundService?.playSuccess();
         _showWinDialog();
       }
 
@@ -126,6 +128,7 @@ class _Game2048WidgetState extends State<Game2048Widget>
         isGameOver = true;
         _timer?.cancel();
         _hapticService?.heavy();
+        _soundService?.playGameOver();
       }
 
       if (moveScore > 0) {
@@ -198,10 +201,14 @@ class _Game2048WidgetState extends State<Game2048Widget>
       },
       child: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [widget.game.primaryColor.withOpacity(0.1), Colors.white],
+          color: const Color(0xFF1B1B1B), // Dark background for premium feel
+          gradient: RadialGradient(
+            center: const Alignment(0, -0.5),
+            radius: 1.2,
+            colors: [
+              widget.game.primaryColor.withOpacity(0.08),
+              const Color(0xFF0F0F0F),
+            ],
           ),
         ),
         child: SafeArea(
@@ -270,39 +277,49 @@ class _Game2048WidgetState extends State<Game2048Widget>
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEDC22E),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFEDC22E).withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Hero(
+                  tag: 'game_title_${widget.game.id}',
+                  child: Text(
+                    widget.game.title,
+                    style: const TextStyle(
+                      fontSize: 40,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -1,
+                    ),
+                  ),
+                ),
+                Text(
+                  'MERGE TO THE PEAK',
+                  style: TextStyle(
+                    color: widget.game.primaryColor.withOpacity(0.8),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2,
+                  ),
                 ),
               ],
             ),
-            child: const Text(
-              '2048',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-              ),
-            ),
           ),
           IconButton(
-            onPressed: _startNewGame,
-            icon: const Icon(Icons.refresh_rounded, size: 32),
-            color: widget.game.primaryColor,
+            onPressed: () {
+              _hapticService?.medium();
+              _startNewGame();
+            },
+            icon: const Icon(Icons.refresh_rounded, size: 28),
+            color: Colors.white,
             style: IconButton.styleFrom(
-              backgroundColor: widget.game.primaryColor.withOpacity(0.1),
-              padding: const EdgeInsets.all(12),
+              backgroundColor: Colors.white.withOpacity(0.05),
+              padding: const EdgeInsets.all(14),
+              side: BorderSide(color: Colors.white.withOpacity(0.1)),
             ),
           ),
         ],
@@ -333,14 +350,14 @@ class _Game2048WidgetState extends State<Game2048Widget>
 
   Widget _buildStatBox(String label, String value, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
+        color: Colors.white.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -351,19 +368,20 @@ class _Game2048WidgetState extends State<Game2048Widget>
           Text(
             label,
             style: TextStyle(
-              color: Colors.grey[600],
+              color: Colors.white.withOpacity(0.4),
               fontSize: 10,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             value,
-            style: TextStyle(
-              color: color,
-              fontSize: 20,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
               fontWeight: FontWeight.w900,
+              fontFamily: 'monospace',
             ),
           ),
         ],
@@ -375,27 +393,21 @@ class _Game2048WidgetState extends State<Game2048Widget>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFBBADA0),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        color: Colors.white.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: GridView.builder(
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: size,
+          crossAxisCount: 4,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
         ),
-        itemCount: size * size,
+        itemCount: 16,
         itemBuilder: (context, index) {
-          int r = index ~/ size;
-          int c = index % size;
+          int r = index ~/ 4;
+          int c = index % 4;
           int val = engine.grid[r][c];
           return _buildTile(val);
         },
@@ -405,17 +417,20 @@ class _Game2048WidgetState extends State<Game2048Widget>
 
   Widget _buildTile(int val) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      curve: Curves.easeInOut,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
-        color: _getTileColor(val),
-        borderRadius: BorderRadius.circular(8),
+        color: val == 0 ? Colors.white.withOpacity(0.05) : _getTileColor(val),
+        borderRadius: BorderRadius.circular(12),
+        border: val > 0 
+          ? Border.all(color: Colors.white.withOpacity(0.1), width: 1.5)
+          : Border.all(color: Colors.white.withOpacity(0.05), width: 1),
         boxShadow: val > 0
             ? [
                 BoxShadow(
                   color: _getTileColor(val).withOpacity(0.3),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
               ]
             : null,
@@ -427,12 +442,19 @@ class _Game2048WidgetState extends State<Game2048Widget>
                 '$val',
                 style: TextStyle(
                   fontSize: val < 100
-                      ? 28
+                      ? 26
                       : val < 1000
-                      ? 24
-                      : 20,
+                      ? 22
+                      : 18,
                   fontWeight: FontWeight.w900,
-                  color: val <= 4 ? const Color(0xFF776E65) : Colors.white,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withOpacity(0.2),
+                      offset: const Offset(1, 1),
+                      blurRadius: 2,
+                    ),
+                  ],
                 ),
               ),
       ),
@@ -441,30 +463,18 @@ class _Game2048WidgetState extends State<Game2048Widget>
 
   Color _getTileColor(int val) {
     switch (val) {
-      case 2:
-        return const Color(0xFFEEE4DA);
-      case 4:
-        return const Color(0xFFEDE0C8);
-      case 8:
-        return const Color(0xFFF2B179);
-      case 16:
-        return const Color(0xFFF59563);
-      case 32:
-        return const Color(0xFFF67C5F);
-      case 64:
-        return const Color(0xFFF65E3B);
-      case 128:
-        return const Color(0xFFEDCF72);
-      case 256:
-        return const Color(0xFFEDCC61);
-      case 512:
-        return const Color(0xFFEDC850);
-      case 1024:
-        return const Color(0xFFEDC53F);
-      case 2048:
-        return const Color(0xFFEDC22E);
-      default:
-        return val == 0 ? const Color(0xFFCDC1B4) : const Color(0xFF3C3A32);
+      case 2: return const Color(0xFF3498DB);
+      case 4: return const Color(0xFF2980B9);
+      case 8: return const Color(0xFF2ECC71);
+      case 16: return const Color(0xFF27AE60);
+      case 32: return const Color(0xFFE67E22);
+      case 64: return const Color(0xFFD35400);
+      case 128: return const Color(0xFFE74C3C);
+      case 256: return const Color(0xFFC0392B);
+      case 512: return const Color(0xFF9B59B6);
+      case 1024: return const Color(0xFF8E44AD);
+      case 2048: return const Color(0xFFF1C40F);
+      default: return val == 0 ? Colors.transparent : const Color(0xFF2C3E50);
     }
   }
 

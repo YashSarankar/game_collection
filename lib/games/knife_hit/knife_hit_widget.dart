@@ -560,7 +560,16 @@ class _KnifeHitWidgetState extends State<KnifeHitWidget>
               const SizedBox(width: 20),
               _actionButton(
                 "MENU",
-                () => setState(() => _isGameOver = false),
+                () {
+                  _rotationController.stop();
+                  _resetLevel(1);
+                  setState(() {
+                    _isPlaying = false;
+                    _isGameOver = false;
+                    _score = 0;
+                    _chips.clear();
+                  });
+                },
                 isDark ? Colors.white12 : Colors.black12,
                 isDark ? Colors.white : Colors.black,
               ),
