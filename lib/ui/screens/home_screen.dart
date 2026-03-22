@@ -202,10 +202,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   int _getDailyIndex(int total) {
+    if (total <= 0) return 0;
     final now = DateTime.now();
     // Use days since a fixed epoch to get a stable index for the entire day
     final daysSinceEpoch = now.difference(DateTime(2025, 1, 1)).inDays;
-    return daysSinceEpoch % total;
+    // We adjust by -1 so recently added game at the end doesn't shift the entire index logic drastically
+    return daysSinceEpoch % (total - 1);
   }
 
   Widget _buildHeroSection(bool isDark) {

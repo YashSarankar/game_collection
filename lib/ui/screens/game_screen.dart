@@ -26,6 +26,7 @@ import '../../games/reaction_time_battle/reaction_time_battle_widget.dart';
 import '../../games/tug_of_war/tug_of_war_widget.dart';
 import '../../games/knife_hit/knife_hit_widget.dart';
 import '../../games/match_3/match_3_widget.dart';
+import '../../games/arrows/arrows_widget.dart';
 
 class GameScreen extends StatefulWidget {
   final GameModel game;
@@ -100,6 +101,8 @@ class _GameScreenState extends State<GameScreen> {
         return KnifeHitWidget(game: widget.game);
       case GameType.match3:
         return Match3Widget(game: widget.game);
+      case GameType.arrows:
+        return ArrowsGameWidget(game: widget.game);
     }
   }
 }

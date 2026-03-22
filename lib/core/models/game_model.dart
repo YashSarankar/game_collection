@@ -28,6 +28,7 @@ enum GameType {
   tugOfWar,
   knifeHit,
   match3,
+  arrows,
 }
 
 /// Enum for different game categories
@@ -384,6 +385,17 @@ class GamesList {
       category: GameCategory.brainGym,
       primaryColor: Color(0xFFFF4081), // Pink Accent
       secondaryColor: Color(0xFF7C4DFF), // Deep Purple
+      isMultiplayer: false,
+    ),
+    const GameModel(
+      id: 'arrows',
+      title: 'Arrows',
+      subtitle: 'Puzzle Escape',
+      icon: Icons.call_split_rounded,
+      type: GameType.arrows,
+      category: GameCategory.brainGym,
+      primaryColor: Color(0xFF6C5CE7), // Primary Button Color
+      secondaryColor: Color(0xFF4D94FF), // Arrow Down Soft Blue
       isMultiplayer: false,
     ),
   ];
