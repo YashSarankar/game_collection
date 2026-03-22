@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/game_model.dart';
 import '../../core/providers/score_provider.dart';
 import '../../core/services/haptic_service.dart';
+import 'game_2048_engine.dart';
 
 class Game2048Widget extends StatefulWidget {
   final GameModel game;
@@ -17,8 +17,7 @@ class Game2048Widget extends StatefulWidget {
 class _Game2048WidgetState extends State<Game2048Widget>
     with SingleTickerProviderStateMixin {
   static const int size = 4;
-  late List<List<int>> grid;
-  int score = 0;
+  late Game2048Engine engine;
   bool isGameOver = false;
   bool isGameWon = false;
   HapticService? _hapticService;
@@ -69,15 +68,12 @@ class _Game2048WidgetState extends State<Game2048Widget>
   }
 
   void _startNewGame() {
-    grid = List.generate(size, (_) => List.filled(size, 0));
-    score = 0;
+    engine = Game2048Engine(size: size);
     _secondsElapsed = 0;
     isGameOver = false;
     isGameWon = false;
     _gameStarted = false;
     _timer?.cancel();
-    _addNewTile();
-    _addNewTile();
     _startCountdown();
     setState(() {});
   }
@@ -105,23 +101,6 @@ class _Game2048WidgetState extends State<Game2048Widget>
     });
   }
 
-  void _addNewTile() {
-    List<Point<int>> emptyCells = [];
-    for (int r = 0; r < size; r++) {
-      for (int c = 0; c < size; c++) {
-        if (grid[r][c] == 0) {
-          emptyCells.add(Point(r, c));
-        }
-      }
-    }
-
-    if (emptyCells.isNotEmpty) {
-      final randomCell = emptyCells[Random().nextInt(emptyCells.length)];
-      // 90% chance for 2, 10% for 4
-      grid[randomCell.x][randomCell.y] = Random().nextDouble() < 0.9 ? 2 : 4;
-    }
-  }
-
   void _move(Direction direction) {
     if (isGameOver || _isCountingDown) return;
 
@@ -130,96 +109,31 @@ class _Game2048WidgetState extends State<Game2048Widget>
       _startTimer();
     }
 
-    bool moved = false;
-    int moveScore = 0;
-
-    List<List<int>> newGrid = List.generate(size, (r) => List.from(grid[r]));
-
-    if (direction == Direction.left || direction == Direction.right) {
-      for (int r = 0; r < size; r++) {
-        List<int> line = newGrid[r];
-        if (direction == Direction.right) line = line.reversed.toList();
-
-        var result = _processLine(line);
-        List<int> processedLine = result.line;
-        moveScore += result.score;
-
-        if (direction == Direction.right) {
-          processedLine = processedLine.reversed.toList();
-        }
-
-        for (int c = 0; c < size; c++) {
-          if (newGrid[r][c] != processedLine[c]) moved = true;
-          newGrid[r][c] = processedLine[c];
-        }
-      }
-    } else {
-      for (int c = 0; c < size; c++) {
-        List<int> line = [];
-        for (int r = 0; r < size; r++) {
-          line.add(newGrid[r][c]);
-        }
-
-        if (direction == Direction.down) line = line.reversed.toList();
-
-        var result = _processLine(line);
-        List<int> processedLine = result.line;
-        moveScore += result.score;
-
-        if (direction == Direction.down) {
-          processedLine = processedLine.reversed.toList();
-        }
-
-        for (int r = 0; r < size; r++) {
-          if (newGrid[r][c] != processedLine[r]) moved = true;
-          newGrid[r][c] = processedLine[r];
-        }
-      }
-    }
+    int oldScore = engine.score;
+    bool moved = engine.makeMove(direction);
 
     if (moved) {
       _hapticService?.light();
-      grid = newGrid;
-      score += moveScore;
-      _addNewTile();
-      _checkGameOver();
+      
+      int moveScore = engine.score - oldScore;
+      
+      if (engine.hasWon() && !isGameWon) {
+        isGameWon = true;
+        _showWinDialog();
+      }
+
+      if (!engine.canMove()) {
+        isGameOver = true;
+        _timer?.cancel();
+        _hapticService?.heavy();
+      }
 
       if (moveScore > 0) {
-        context.read<ScoreProvider>().saveScore(widget.game.id, score);
+        context.read<ScoreProvider>().saveScore(widget.game.id, engine.score);
       }
 
       setState(() {});
     }
-  }
-
-  LineResult _processLine(List<int> line) {
-    // 1. Compression: Remove zeros
-    List<int> filtered = line.where((x) => x != 0).toList();
-
-    // 2. Merge adjacent tiles
-    int lineScore = 0;
-    List<int> merged = [];
-    for (int i = 0; i < filtered.length; i++) {
-      if (i + 1 < filtered.length && filtered[i] == filtered[i + 1]) {
-        int newVal = filtered[i] * 2;
-        merged.add(newVal);
-        lineScore += newVal;
-        if (newVal == 2048 && !isGameWon) {
-          isGameWon = true;
-          _showWinDialog();
-        }
-        i++;
-      } else {
-        merged.add(filtered[i]);
-      }
-    }
-
-    // 3. Second Compression: Fill with zeros
-    while (merged.length < size) {
-      merged.add(0);
-    }
-
-    return LineResult(merged, lineScore);
   }
 
   void _showWinDialog() {
@@ -263,28 +177,6 @@ class _Game2048WidgetState extends State<Game2048Widget>
         ],
       ),
     );
-  }
-
-  void _checkGameOver() {
-    // Check for empty cells
-    for (int r = 0; r < size; r++) {
-      for (int c = 0; c < size; c++) {
-        if (grid[r][c] == 0) return;
-      }
-    }
-
-    // Check for possible merges
-    for (int r = 0; r < size; r++) {
-      for (int c = 0; c < size; c++) {
-        int val = grid[r][c];
-        if (r + 1 < size && grid[r + 1][c] == val) return;
-        if (c + 1 < size && grid[r][c + 1] == val) return;
-      }
-    }
-
-    isGameOver = true;
-    _timer?.cancel();
-    _hapticService?.heavy();
   }
 
   String _formatTime(int seconds) {
@@ -424,7 +316,7 @@ class _Game2048WidgetState extends State<Game2048Widget>
       child: Row(
         children: [
           Expanded(
-            child: _buildStatBox('SCORE', '$score', widget.game.primaryColor),
+            child: _buildStatBox('SCORE', '${engine.score}', widget.game.primaryColor),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -504,7 +396,7 @@ class _Game2048WidgetState extends State<Game2048Widget>
         itemBuilder: (context, index) {
           int r = index ~/ size;
           int c = index % size;
-          int val = grid[r][c];
+          int val = engine.grid[r][c];
           return _buildTile(val);
         },
       ),
@@ -596,7 +488,7 @@ class _Game2048WidgetState extends State<Game2048Widget>
             ),
             const SizedBox(height: 8),
             Text(
-              'Final Score: $score',
+              'Final Score: ${engine.score}',
               style: const TextStyle(color: Colors.white70, fontSize: 18),
             ),
             const SizedBox(height: 24),
@@ -623,12 +515,4 @@ class _Game2048WidgetState extends State<Game2048Widget>
       ),
     );
   }
-}
-
-enum Direction { up, down, left, right }
-
-class LineResult {
-  final List<int> line;
-  final int score;
-  LineResult(this.line, this.score);
 }
