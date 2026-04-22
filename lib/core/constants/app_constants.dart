@@ -10,4 +10,8 @@ class AppConstants {
   static const String keySoundEnabled = 'sound_enabled';
   static const String keyVibrationEnabled = 'vibration_enabled';
   static const String keyThemeMode = 'theme_mode';
+  static const String keySessionCount = 'session_count';
+  static const String keyFirstInstallTime = 'first_install_time';
+  static const String keyIsAdsRemoved = 'is_ads_removed';
+  static const String keyLastReviewRequest = 'last_review_request';
 }

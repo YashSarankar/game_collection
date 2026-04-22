@@ -81,6 +81,51 @@ class StorageService {
     return await _prefs?.setString(AppConstants.keyThemeMode, mode) ?? false;
   }
 
+  // Session Tracking & Growth Metrics
+  int getSessionCount() {
+    return _prefs?.getInt(AppConstants.keySessionCount) ?? 0;
+  }
+
+  Future<void> incrementSessionCount() async {
+    final current = getSessionCount();
+    await _prefs?.setInt(AppConstants.keySessionCount, current + 1);
+    
+    // Set install time if this is the first session
+    if (current == 0) {
+      await _prefs?.setString(
+        AppConstants.keyFirstInstallTime,
+        DateTime.now().toIso8601String(),
+      );
+    }
+  }
+
+  DateTime getFirstInstallTime() {
+    final timeStr = _prefs?.getString(AppConstants.keyFirstInstallTime);
+    if (timeStr == null) return DateTime.now();
+    return DateTime.parse(timeStr);
+  }
+
+  bool isAdsRemoved() {
+    return _prefs?.getBool(AppConstants.keyIsAdsRemoved) ?? false;
+  }
+
+  Future<void> setAdsRemoved(bool removed) async {
+    await _prefs?.setBool(AppConstants.keyIsAdsRemoved, removed);
+  }
+
+  DateTime? getLastReviewRequest() {
+    final timeStr = _prefs?.getString(AppConstants.keyLastReviewRequest);
+    if (timeStr == null) return null;
+    return DateTime.parse(timeStr);
+  }
+
+  Future<void> setLastReviewRequest(DateTime time) async {
+    await _prefs?.setString(
+      AppConstants.keyLastReviewRequest,
+      time.toIso8601String(),
+    );
+  }
+
   // Clear all data
   Future<bool> clearAllData() async {
     return await _prefs?.clear() ?? false;

@@ -5,11 +5,14 @@ import 'package:provider/provider.dart';
 import 'core/services/storage_service.dart';
 import 'core/services/haptic_service.dart';
 import 'core/services/sound_service.dart';
+import 'core/services/update_service.dart';
 import 'core/services/ad_service.dart';
+import 'core/services/purchase_service.dart';
 import 'core/providers/settings_provider.dart';
 import 'core/providers/score_provider.dart';
 
 import 'ui/screens/splash_screen.dart';
+import 'ui/screens/update_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,9 +29,15 @@ void main() async {
 
   // Initialize Services
   final storageService = await StorageService.getInstance();
+  await storageService.incrementSessionCount();
+  
   final hapticService = await HapticService.getInstance();
   final soundService = await SoundService.getInstance();
+  final purchaseService = await PurchaseService.getInstance();
   await AdService.getInstance();
+  
+  // 3. Check for Mandatory Updates
+  final updateInfo = await UpdateService.checkUpdate();
 
   runApp(
     MultiProvider(
@@ -38,17 +47,32 @@ void main() async {
               SettingsProvider(storageService, hapticService, soundService),
         ),
         ChangeNotifierProvider(create: (_) => ScoreProvider(storageService)),
+        ChangeNotifierProvider.value(value: purchaseService),
       ],
-      child: const MyApp(),
+      child: MyApp(updateInfo: updateInfo),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final Map<String, dynamic>? updateInfo;
+  
+  const MyApp({super.key, this.updateInfo});
 
   @override
   Widget build(BuildContext context) {
+    // If a mandatory update is required, show the Update Screen immediately
+    if (updateInfo != null && updateInfo!['shouldUpdate'] == true) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(useMaterial3: true),
+        home: UpdateScreen(
+          latestVersion: updateInfo!['latestVersion'],
+          updateUrl: updateInfo!['updateUrl'],
+        ),
+      );
+    }
+
     return Consumer<SettingsProvider>(
       builder: (context, settings, child) {
         // Wait for settings to load before building the app

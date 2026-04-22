@@ -5,6 +5,8 @@ import '../../core/providers/settings_provider.dart';
 import '../../core/providers/score_provider.dart';
 
 import '../../core/services/haptic_service.dart';
+import '../../core/services/purchase_service.dart';
+import '../../core/services/review_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -41,6 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final settingsProvider = Provider.of<SettingsProvider>(context);
     final scoreProvider = Provider.of<ScoreProvider>(context);
+    final purchaseService = Provider.of<PurchaseService>(context);
 
     // Determines if we used dark mode based on Theme (system or user preference)
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -97,6 +100,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
 
           const SizedBox(height: 24),
+
+          /*
+          // Section: Premium (Growth Strategy)
+          if (!purchaseService.hasRemovedAds) ...[
+            _buildSectionHeader('PREMIUM'),
+            _buildGroup(
+              backgroundColor: groupColor,
+              dividerColor: dividerColor,
+              isDark: isDark,
+              children: [
+                _buildActionTile(
+                  title: 'Remove Ads Permanent',
+                  icon: Icons.block_rounded,
+                  iconColor: Colors.purple,
+                  onTap: () => purchaseService.buyRemoveAds(),
+                  isDark: isDark,
+                  subtitle: 'One-time purchase to remove all ads',
+                ),
+                _buildActionTile(
+                  title: 'Restore Purchase',
+                  icon: Icons.restore_rounded,
+                  iconColor: Colors.blue,
+                  onTap: () => purchaseService.restorePurchases(),
+                  isDark: isDark,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+          ],
+          */
 
           // Section 2: Appearance
           _buildSectionHeader('APPEARANCE'),
@@ -173,16 +206,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: 'Privacy Policy',
                 icon: Icons.privacy_tip_rounded,
                 iconColor: Colors.blueAccent,
-                onTap: () => _launchURL('https://sarankar.com/privacy'),
+                onTap: () => _launchURL(
+                    'https://doc-hosting.flycricket.io/snapplay-offline-mini-games-privacy-policy/120fdfb1-ded5-4a21-9be0-19d5b2b5a43f/privacy'),
                 isDark: isDark,
               ),
               _buildNavigationTile(
                 title: 'Rate SnapPlay',
                 icon: Icons.star_rate_rounded,
                 iconColor: Colors.amber,
-                onTap: () => _launchURL(
-                  'https://play.google.com/store/apps/details?id=com.snapplay.offline.games',
-                ),
+                onTap: () async {
+                  final reviewService = await ReviewService.getInstance();
+                  await reviewService.forceReview();
+                },
                 isDark: isDark,
               ),
               _buildNavigationTile(
@@ -197,7 +232,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: 'Version',
                 icon: Icons.info_rounded,
                 iconColor: Colors.grey,
-                value: '1.0.3',
+                value: '3.1.0',
                 onTap: null, // Read-only
                 isDark: isDark,
               ),
@@ -364,6 +399,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required VoidCallback onTap,
     required bool isDark,
     Color? textColor,
+    String? subtitle,
   }) {
     return InkWell(
       onTap: onTap,
@@ -375,12 +411,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildIcon(icon, iconColor),
             const SizedBox(width: 16),
             Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: textColor ?? (isDark ? Colors.white : Colors.black),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color:
+                          textColor ?? (isDark ? Colors.white : Colors.black),
+                    ),
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                    ),
+                ],
               ),
             ),
           ],

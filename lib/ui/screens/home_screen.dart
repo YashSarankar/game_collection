@@ -12,6 +12,8 @@ import 'game_screen.dart';
 import 'multiplayer_screen.dart';
 import 'search_screen.dart';
 import '../../core/services/ad_service.dart';
+import '../../core/services/review_service.dart';
+import '../widgets/banner_ad_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -48,10 +50,16 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(builder: (context) => GameScreen(game: game)),
     );
 
-    // Show Interstitial Ad when returning from game
+    // Record game played and show Interstitial Ad when returning
     if (!mounted) return;
     final adService = await AdService.getInstance();
+    adService.recordGamePlayed();
     adService.showInterstitialAd();
+
+    // Trigger Smart Review Request
+    if (!mounted) return;
+    final reviewService = await ReviewService.getInstance();
+    reviewService.requestReview();
   }
 
   void _navigateToSettings() async {
@@ -143,6 +151,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             color: isDark ? Colors.white38 : Colors.black38,
                           ),
                         ),
+                        const SizedBox(height: 20),
+                        const BannerAdWidget(),
                       ],
                     ),
                   ),
