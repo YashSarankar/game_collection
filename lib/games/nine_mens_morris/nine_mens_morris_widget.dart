@@ -5,6 +5,7 @@ import '../../core/services/haptic_service.dart';
 import '../../ui/widgets/game_countdown.dart';
 import '../../ui/widgets/game_over_dialog.dart';
 import 'nine_mens_morris_logic.dart';
+import 'nine_mens_morris_ai.dart';
 
 class NineMensMorrisWidget extends StatefulWidget {
   final GameModel game;
@@ -18,6 +19,10 @@ class _NineMensMorrisWidgetState extends State<NineMensMorrisWidget> {
   late NineMensMorrisLogic _logic;
   bool _isCountingDown = true;
   HapticService? _hapticService;
+  
+  bool _isAiMode = true;
+  bool _isAiThinking = false;
+  int _aiDifficulty = 5;
 
   @override
   void initState() {
@@ -37,10 +42,57 @@ class _NineMensMorrisWidgetState extends State<NineMensMorrisWidget> {
   }
 
   void _handleTap(int index) {
+    if (_isCountingDown || _logic.phase == GamePhase.gameOver) return;
+    if (_isAiMode && _logic.currentPlayer == Player.player2) return; // Prevent human tap during AI turn
+    if (_isAiThinking) return;
+
+    _processTap(index);
+  }
+
+  void _processTap(int index) {
     _hapticService?.light();
     _logic.handleTap(index);
+    
     if (_logic.phase == GamePhase.gameOver) {
       _showGameOver();
+      return;
+    }
+    
+    // Check if it's AI turn now
+    if (_isAiMode && _logic.currentPlayer == Player.player2 && _logic.phase != GamePhase.gameOver) {
+      _triggerAiTurn();
+    }
+  }
+
+  void _triggerAiTurn() async {
+    if (!mounted) return;
+    setState(() {
+      _isAiThinking = true;
+    });
+
+    Map<String, dynamic> stateMap = _logic.aiStateMap;
+    stateMap['difficulty'] = _aiDifficulty;
+    
+    List<int>? taps = await getNineMensMorrisBestMove(stateMap);
+    
+    if (taps != null) {
+      for (int i = 0; i < taps.length; i++) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          _hapticService?.light();
+          _logic.handleTap(taps[i]);
+          setState(() {});
+        }
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isAiThinking = false;
+      });
+      if (_logic.phase == GamePhase.gameOver) {
+        _showGameOver();
+      }
     }
   }
 
@@ -213,6 +265,63 @@ class _NineMensMorrisWidgetState extends State<NineMensMorrisWidget> {
               );
             },
           ),
+          const SizedBox(height: 10),
+          // AI Toggle & Difficulty
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'vs Player',
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : Colors.black54,
+                  fontWeight: !_isAiMode ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              Switch(
+                value: _isAiMode,
+                activeColor: widget.game.primaryColor,
+                onChanged: (val) {
+                  if (_logic.phase != GamePhase.gameOver && !_isAiThinking) {
+                    setState(() {
+                      _isAiMode = val;
+                      if (_isAiMode && _logic.currentPlayer == Player.player2) {
+                        _triggerAiTurn();
+                      }
+                    });
+                  }
+                },
+              ),
+              Text(
+                'vs AI',
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : Colors.black54,
+                  fontWeight: _isAiMode ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+          if (_isAiThinking)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'AI is thinking...',
+                    style: TextStyle(
+                      color: isDark ? Colors.white54 : Colors.black45,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

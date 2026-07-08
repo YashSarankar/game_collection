@@ -128,6 +128,16 @@ class AdService {
   /// Public check to see if ads should be shown
   bool get shouldShowAds => _shouldShowAd;
 
+  /// Public check to see if banner ads should be shown
+  bool get shouldShowBannerAds {
+    // Check if the user has purchased "Remove Ads"
+    if (_storage.isAdsRemoved()) {
+      return false;
+    }
+    // Banners shouldn't be constrained by "session count" or "games played" like interstitials
+    return true;
+  }
+
   /// Call this whenever a game is finished
   void recordGamePlayed() {
     _gamesPlayedThisSession++;

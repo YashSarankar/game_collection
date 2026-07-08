@@ -263,7 +263,7 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
 
   Widget _buildLevelSelection(bool isDark) {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -464,6 +464,8 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
+                    for (int i = 0; i < bottle.capacity - bottle.stack.length; i++)
+                      Expanded(child: Container()),
                     for (int i = bottle.stack.length - 1; i >= 0; i--)
                       Expanded(
                         child: Container(
@@ -482,9 +484,7 @@ class _WaterSortWidgetState extends State<WaterSortWidget>
                           ),
                         ),
                       ),
-                    for (int i = 0; i < bottle.capacity - bottle.stack.length; i++)
-                      Expanded(child: Container()),
-                  ].reversed.toList(),
+                  ],
                 ),
               ),
             ),

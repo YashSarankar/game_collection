@@ -6,6 +6,7 @@ import '../../core/models/game_model.dart';
 import '../../core/providers/score_provider.dart';
 import '../../core/services/haptic_service.dart';
 import '../../core/services/sound_service.dart';
+import 'number_puzzle_solver.dart';
 
 class NumberPuzzleWidget extends StatefulWidget {
   final GameModel game;
@@ -29,6 +30,9 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
   int _countdown = 3;
   bool _isCountingDown = true;
   Timer? _countdownTimer;
+
+  bool _isSolving = false;
+  int? _hintIndex;
 
   @override
   void initState() {
@@ -59,6 +63,8 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
     _shuffle();
     moves = 0;
     isSolved = false;
+    _hintIndex = null;
+    _isSolving = false;
     _winController.reset();
     _startCountdown();
     setState(() {});
@@ -88,6 +94,8 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
   void _shuffle() {
     Random random = Random();
     int emptyIndex = tiles.indexOf(0);
+    int lastEmptyIndex = -1;
+    
     for (int i = 0; i < 200; i++) {
       List<int> validMoves = [];
       int r = emptyIndex ~/ size;
@@ -98,9 +106,14 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
       if (c > 0) validMoves.add(emptyIndex - 1);
       if (c < size - 1) validMoves.add(emptyIndex + 1);
 
+      if (lastEmptyIndex != -1) {
+        validMoves.remove(lastEmptyIndex);
+      }
+
       int moveToIndex = validMoves[random.nextInt(validMoves.length)];
       tiles[emptyIndex] = tiles[moveToIndex];
       tiles[moveToIndex] = 0;
+      lastEmptyIndex = emptyIndex;
       emptyIndex = moveToIndex;
     }
     _checkSolved();
@@ -108,6 +121,12 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
 
   void _onTileTap(int index) {
     if (isSolved || _isCountingDown) return;
+
+    if (_hintIndex != null) {
+      setState(() {
+        _hintIndex = null;
+      });
+    }
 
     int emptyIndex = tiles.indexOf(0);
     if (_isAdjacent(index, emptyIndex)) {
@@ -128,6 +147,30 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
       }
     } else {
       _hapticService?.error();
+    }
+  }
+
+  void _getHint() async {
+    if (_isSolving || isSolved || _isCountingDown) return;
+    setState(() {
+      _isSolving = true;
+      _hintIndex = null;
+    });
+
+    try {
+      int hint = await getNumberPuzzleHintAsync(List.from(tiles), size);
+      if (mounted) {
+        setState(() {
+          _isSolving = false;
+          _hintIndex = hint != -1 ? hint : null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSolving = false;
+        });
+      }
     }
   }
 
@@ -214,14 +257,21 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
                 ),
                 Container(
                   margin: const EdgeInsets.only(top: 4),
-                  child: Row(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: widget.game.primaryColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: widget.game.primaryColor.withOpacity(0.2)),
+                          border: Border.all(
+                            color: widget.game.primaryColor.withOpacity(0.2),
+                          ),
                         ),
                         child: const Text(
                           'BRAIN GYM CHALLENGE',
@@ -233,20 +283,31 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.trending_up, color: Colors.white54, size: 12),
+                            Icon(
+                              Icons.trending_up,
+                              color: Colors.white54,
+                              size: 12,
+                            ),
                             SizedBox(width: 4),
                             Text(
                               'ORDER: 1-15',
-                              style: TextStyle(color: Colors.white54, fontSize: 8, fontWeight: FontWeight.w900),
+                              style: TextStyle(
+                                color: Colors.white54,
+                                fontSize: 8,
+                                fontWeight: FontWeight.w900,
+                              ),
                             ),
                           ],
                         ),
@@ -432,7 +493,16 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
               ],
             ),
             borderRadius: BorderRadius.circular(16),
+            border: _hintIndex == index
+                ? Border.all(color: Colors.amberAccent, width: 3)
+                : null,
             boxShadow: [
+              if (_hintIndex == index)
+                const BoxShadow(
+                  color: Colors.amberAccent,
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                ),
               BoxShadow(
                 color: widget.game.primaryColor.withOpacity(0.3),
                 blurRadius: 12,
@@ -489,6 +559,12 @@ class _NumberPuzzleWidgetState extends State<NumberPuzzleWidget>
             onPressed: _startNewGame,
             icon: Icons.refresh_rounded,
             label: 'Restart',
+          ),
+          const SizedBox(width: 16),
+          _buildActionButton(
+            onPressed: _isSolving ? () {} : _getHint,
+            icon: _isSolving ? Icons.hourglass_bottom_rounded : Icons.lightbulb_outline_rounded,
+            label: _isSolving ? 'Thinking...' : 'Hint',
           ),
         ],
       ),

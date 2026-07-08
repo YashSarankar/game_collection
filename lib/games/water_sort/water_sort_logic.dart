@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 class WaterSortBottle {
@@ -115,65 +116,59 @@ class WaterSortLogic {
     int emptyBottles = 2;
     
     List<WaterSortBottle> bottles = [];
-    bool solvable = false;
+    
+    // 1. Start from a solved state
+    for (int i = 0; i < colorCount; i++) {
+      bottles.add(WaterSortBottle(
+        stack: List.filled(4, gameColors[i]),
+      ));
+    }
+    for (int i = 0; i < emptyBottles; i++) {
+      bottles.add(WaterSortBottle(stack: []));
+    }
+
+    // 2. Perform Reverse Simulation shuffles
+    // This guarantees the puzzle is solvable and is O(n) instead of exponential.
+    int shuffleCount = 40 + (difficulty * 25);
+    int successfulShuffles = 0;
     int attempts = 0;
+    math.Random rnd = math.Random();
 
-    while (!solvable && attempts < 100) {
+    while (successfulShuffles < shuffleCount && attempts < 2000) {
       attempts++;
-      List<Color> allColors = [];
-      for (int i = 0; i < colorCount; i++) {
-        for (int j = 0; j < 4; j++) {
-          allColors.add(gameColors[i]);
-        }
+      
+      // Pick a random bottle that isn't empty
+      int fromIdx = rnd.nextInt(bottles.length);
+      WaterSortBottle from = bottles[fromIdx];
+      if (from.isEmpty) continue;
+      
+      Color x = from.topColor!;
+      int countOfX = from.countTopSameColor;
+      
+      // Decide how many to reverse pour (1 to countOfX)
+      int k = rnd.nextInt(countOfX) + 1;
+      
+      // Pick a target bottle
+      int toIdx = rnd.nextInt(bottles.length);
+      if (fromIdx == toIdx) continue;
+      WaterSortBottle to = bottles[toIdx];
+      
+      // Target bottle must have at least k spaces
+      int space = to.capacity - to.stack.length;
+      if (space < k) continue;
+      
+      // Target bottle must be empty, OR its top color must NOT be X.
+      // (If it was X, then they would merge when playing forward, 
+      // making it impossible to guarantee exactly k items were poured)
+      if (!to.isEmpty && to.topColor == x) continue;
+      
+      // Perform the reverse pour
+      for (int i = 0; i < k; i++) {
+        to.stack.add(from.stack.removeLast());
       }
-      allColors.shuffle();
-
-      bottles = [];
-      for (int i = 0; i < colorCount; i++) {
-        bottles.add(
-          WaterSortBottle(
-            stack: allColors.sublist(i * 4, (i + 1) * 4),
-          ),
-        );
-      }
-      for (int i = 0; i < emptyBottles; i++) {
-        bottles.add(WaterSortBottle(stack: []));
-      }
-
-      if (WaterSortSolver.canBeSolved(bottles)) {
-        solvable = true;
-      }
+      successfulShuffles++;
     }
 
     return bottles;
-  }
-}
-
-class WaterSortSolver {
-  static bool canBeSolved(List<WaterSortBottle> initialBottles) {
-    Set<String> visited = {};
-    return _dfs(initialBottles, visited);
-  }
-
-  static bool _dfs(List<WaterSortBottle> current, Set<String> visited) {
-    String stateKey = current.map((b) => b.id).join('|');
-    if (visited.contains(stateKey)) return false;
-    visited.add(stateKey);
-
-    if (WaterSortLogic.isWin(current)) return true;
-
-    for (int i = 0; i < current.length; i++) {
-      for (int j = 0; j < current.length; j++) {
-        if (i == j) continue;
-
-        if (WaterSortLogic.canPour(current[i], current[j])) {
-          var nextState = current.map((b) => b.copy()).toList();
-          WaterSortLogic.pour(nextState[i], nextState[j]);
-          if (_dfs(nextState, visited)) return true;
-        }
-      }
-    }
-
-    return false;
   }
 }

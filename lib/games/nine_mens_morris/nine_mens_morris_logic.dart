@@ -270,4 +270,17 @@ class NineMensMorrisLogic extends ChangeNotifier {
     message = "Player 1: Place a piece";
     notifyListeners();
   }
+
+  Map<String, dynamic> get aiStateMap => {
+        'board': board
+            .map((p) => p == Player.none
+                ? 0
+                : (p == Player.player1 ? 1 : 2))
+            .toList(),
+        'p1Hand': p1PiecesToPlace,
+        'p2Hand': p2PiecesToPlace,
+        'p1Board': p1PiecesOnBoard,
+        'p2Board': p2PiecesOnBoard,
+        'turn': currentPlayer == Player.player1 ? 1 : 2,
+      };
 }
